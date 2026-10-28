@@ -119,7 +119,7 @@ latest = sorted(recent, key=lambda a: a["published"], reverse=True)[:150]
 shutil.rmtree(OUT, ignore_errors=True)
 shutil.copytree("site", OUT)
 save(OUT, "topics.json", {"topics": topics, "sources": sources, "stand": now.isoformat()})
-save(OUT, "latest.json", {"articles": [{k: a[k] for k in ("source", "title", "link", "published")} for a in latest]})
+save(OUT, "latest.json", {"articles": [{k: (a.get(k) or "")[:200] if k == "summary" else a.get(k) for k in ("source", "title", "link", "published", "image", "summary")} for a in latest]})
 save(OUT, "status.json", {
     "feeds": status,
     "abgleich": embed.status(),

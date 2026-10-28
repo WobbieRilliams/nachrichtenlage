@@ -4,103 +4,117 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Die Lage">
-<meta name="theme-color" content="#FCFCFA" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#141413" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet">
 <title>Die Lage</title>
 <style>
 :root{
-  --paper:#FCFCFA; --ink:#161616; --ink-2:#2B2B29; --muted:#5C5C58; --rule:#DCDAD4; --rule-strong:#161616;
-  --accent:#B23A0B; --dot-off:#B9B7B0; --note:#F4F1EA;
-  --serif:'Newsreader',Georgia,'Times New Roman',serif; --sans:'Public Sans',-apple-system,system-ui,sans-serif;
+  --bg:#FFFFFF; --ink:#121212; --ink-2:#363636; --muted:#727272; --rule:#DFDFDF; --rule-dark:#121212;
+  --chip:#F7F7F5; --img:#EBEBEB;
+  --serif:'Source Serif 4',Georgia,'Times New Roman',serif;
+  --sans:'Libre Franklin',-apple-system,'Helvetica Neue',Arial,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root{
-  --paper:#141413; --ink:#EDEBE5; --ink-2:#D6D4CD; --muted:#A3A19A; --rule:#34332F; --rule-strong:#EDEBE5;
-  --accent:#F08A5D; --dot-off:#55534E; --note:#1F1E1C;
+  --bg:#121212; --ink:#F0F0F0; --ink-2:#CFCFCF; --muted:#9A9A9A; --rule:#333333; --rule-dark:#F0F0F0;
+  --chip:#1E1E1E; --img:#262626;
 }}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 var(--sans);padding-bottom:env(safe-area-inset-bottom)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans);padding-bottom:env(safe-area-inset-bottom)}
 a{color:inherit;text-decoration:none}
-button{font:inherit;color:inherit}
-.wrap{max-width:640px;margin:0 auto;padding:0 20px}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+.wrap{max-width:600px;margin:0 auto;padding:0 16px}
 
-header{position:sticky;top:0;z-index:5;background:var(--paper);padding-top:calc(env(safe-area-inset-top) + 14px)}
-.dateline{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-h1{margin:6px 0 0;font:600 40px/1 var(--serif);letter-spacing:-.02em}
-nav{display:flex;gap:22px;border-top:2px solid var(--rule-strong);border-bottom:1px solid var(--rule);margin-top:10px}
-nav button{background:none;border:0;padding:12px 0 10px;min-height:44px;font-size:14px;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer}
-nav button[aria-current="page"]{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--rule)}
+.mast{padding:calc(env(safe-area-inset-top) + 10px) 0 6px;text-align:center}
+.mast h1{margin:0;font:700 30px/1.1 var(--serif);letter-spacing:-.01em}
+.mast .date{margin-top:4px;font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--ink-2)}
+nav{display:flex;justify-content:center;gap:4px;border-top:1px solid var(--rule)}
+nav button{padding:11px 12px;min-height:44px;font-size:13px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent}
+nav button[aria-current="page"]{color:var(--ink);border-bottom-color:var(--ink)}
 
-.kicker{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
-.meta{font-size:12px;color:var(--muted)}
-.lead{padding:22px 0 20px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:12px}
-.lead h2{margin:0;font:600 29px/1.12 var(--serif);letter-spacing:-.01em}
-.dots{display:flex;gap:5px;flex-wrap:wrap}
-.dots i{width:9px;height:9px;border-radius:50%;background:var(--ink)}
-.dots i.off{background:none;border:1px solid var(--dot-off)}
-.kern{margin:0;font:italic 400 17px/1.45 var(--serif);color:var(--ink-2)}
-.views{display:flex;flex-direction:column;gap:8px;padding-top:4px}
-.view{display:flex;gap:12px;align-items:baseline;font-size:14px;line-height:1.4}
-.view b{flex:0 0 88px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.cta{margin-top:6px;display:flex;align-items:center;justify-content:space-between;min-height:44px;padding:0 16px;border:1px solid var(--rule-strong);font-size:14px;font-weight:600;background:none;width:100%;cursor:pointer;text-align:left}
+main{padding-bottom:56px}
 
-.list a,.list button.row{display:flex;flex-direction:column;gap:6px;padding:16px 0;border-bottom:1px solid var(--rule);width:100%;background:none;border-left:0;border-right:0;border-top:0;text-align:left;cursor:pointer}
-.row-title{font:600 19px/1.25 var(--serif)}
-.section{margin:26px 0 0;padding-bottom:6px;border-bottom:2px solid var(--rule-strong);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.lead{padding:16px 0 20px;border-bottom:1px solid var(--rule)}
+.label{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.photo{display:block;width:100%;aspect-ratio:3/2;object-fit:cover;background:var(--img);margin:0 0 6px}
+.credit{font-size:10px;color:var(--muted);text-align:right;margin-bottom:10px;letter-spacing:.02em}
+.lead h2{margin:6px 0 8px;font:700 27px/1.15 var(--serif);letter-spacing:-.01em}
+.summary{margin:0;font:400 16px/1.45 var(--serif);color:var(--ink-2)}
+.byline{margin-top:10px;font-size:11px;font-weight:500;letter-spacing:.02em;color:var(--muted);text-transform:uppercase}
+.byline b{color:var(--ink);font-weight:700}
 
-.back{background:none;border:0;padding:14px 0 4px;min-height:44px;color:var(--accent);font-size:14px;font-weight:600;cursor:pointer}
-.detail{padding:8px 0 20px;display:flex;flex-direction:column;gap:12px}
-.detail h2{margin:0;font:600 30px/1.12 var(--serif);letter-spacing:-.01em}
-.block h3{margin:22px 0 8px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.block p{margin:0;font:400 17px/1.5 var(--serif)}
-.block ul{margin:0;padding-left:18px;font:400 17px/1.5 var(--serif)}
-.block li{margin:4px 0}
-.persp{display:flex;flex-direction:column}
-.persp div{display:flex;flex-direction:column;gap:2px;padding:10px 0;border-top:1px solid var(--rule)}
-.persp div:first-child{border-top:0}
-.persp b{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.persp span{font:400 16px/1.45 var(--serif)}
-.note{background:var(--note);padding:12px 14px;font-size:14px;color:var(--ink-2)}
-.art{display:flex;flex-direction:column;gap:4px;padding:14px 0;border-bottom:1px solid var(--rule)}
-.art .src{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
-.art .src span{font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted)}
-.art .t{font:600 18px/1.3 var(--serif)}
-.art p{margin:0;font-size:14px;color:var(--muted)}
-.missing{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
-.missing span{text-decoration:line-through;text-decoration-color:var(--dot-off)}
-.fine,.block p.fine{font:400 12px/1.5 var(--sans);color:var(--muted);margin-top:14px}
+.related{margin:14px 0 0;padding:0;list-style:none;border-top:1px solid var(--rule)}
+.related li{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--rule)}
+.related .src{flex:0 0 92px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding-top:2px}
+.related .txt{font:600 15px/1.35 var(--serif)}
+.more{display:inline-flex;align-items:center;gap:6px;min-height:44px;margin-top:4px;font-size:13px;font-weight:700}
 
-.status{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--rule);font-size:15px}
-.status .ok{color:var(--muted)} .status .bad{color:var(--accent);font-weight:600}
-.status small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
-.empty{padding:48px 0;text-align:center;color:var(--muted);font:italic 17px/1.5 var(--serif)}
-main{padding-bottom:48px}
+.cover{display:flex;align-items:center;gap:8px;margin-top:10px}
+.bar{flex:1;height:4px;background:var(--rule);position:relative}
+.bar i{position:absolute;left:0;top:0;bottom:0;background:var(--ink)}
+.cover span{font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap}
+
+.story{display:flex;gap:14px;padding:16px 0;border-bottom:1px solid var(--rule);width:100%}
+.story .body{flex:1;min-width:0}
+.story h3{margin:0 0 6px;font:700 18px/1.22 var(--serif)}
+.story p{margin:0;font:400 14px/1.4 var(--serif);color:var(--ink-2);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.story .thumb{flex:0 0 96px;width:96px;height:96px;object-fit:cover;background:var(--img)}
+.sec{display:flex;align-items:baseline;justify-content:space-between;margin:24px 0 0;padding:0 0 8px;border-bottom:1px solid var(--rule-dark)}
+.sec h2{margin:0;font:700 15px/1.2 var(--sans)}
+.sec span{font-size:11px;color:var(--muted)}
+
+.back{display:flex;align-items:center;gap:4px;min-height:44px;font-size:13px;font-weight:600;color:var(--muted)}
+.article{padding-bottom:12px}
+.article h1{margin:4px 0 10px;font:700 30px/1.13 var(--serif);letter-spacing:-.01em}
+.article .dek{margin:0 0 14px;font:400 19px/1.4 var(--serif);color:var(--ink-2)}
+.text h3{margin:28px 0 8px;font:700 13px/1.3 var(--sans);letter-spacing:.06em;text-transform:uppercase}
+.text p,.text li{font:400 18px/1.55 var(--serif)}
+.text p{margin:0 0 12px}
+.text ul{margin:0;padding-left:20px}
+.text li{margin:0 0 8px}
+.text .who{font:600 12px/1.3 var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px}
+.text h3{padding-bottom:8px;border-bottom:1px solid var(--rule-dark);margin-bottom:12px}
+.pullnote{margin:18px 0 0;padding:12px 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);font-size:12px;color:var(--muted)}
+.box{background:var(--chip);padding:14px 16px;font-size:14px;color:var(--ink-2);margin-top:8px}
+.missing{margin:10px 0 0;font:400 15px/1.6 var(--serif);color:var(--muted)}
+
+.time{flex:0 0 44px;font-size:12px;font-weight:600;color:var(--muted);padding-top:3px}
+
+.row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--rule);font-size:14px}
+.row small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.ok{color:var(--muted)} .bad{color:#C0392B;font-weight:600}
+@media (prefers-color-scheme:dark){.bad{color:#F08A7E}}
+.empty{padding:56px 0;text-align:center;color:var(--muted);font:italic 17px/1.5 var(--serif)}
 </style>
 </head>
 <body>
 <header>
   <div class="wrap">
-    <div class="dateline"><span id="today"></span><span id="stand"></span></div>
-    <h1>Die Lage</h1>
-    <nav aria-label="Bereiche">
-      <button type="button" data-view="topics" aria-current="page">Themen</button>
-      <button type="button" data-view="latest">Neueste</button>
-      <button type="button" data-view="status">Quellen</button>
-    </nav>
+    <div class="mast">
+      <h1>Die Lage</h1>
+      <div class="date" id="date"></div>
+    </div>
   </div>
+  <nav aria-label="Bereiche">
+    <button type="button" data-view="topics" aria-current="page">Themen</button>
+    <button type="button" data-view="latest">Neueste</button>
+    <button type="button" data-view="status">Quellen</button>
+  </nav>
 </header>
 <main class="wrap" id="main"><p class="empty">Lade die Lage …</p></main>
 
 <script>
 const main = document.getElementById('main');
-let SOURCES = {}, TOPICS = [], view = 'topics', inDetail = false;
+let SOURCES = {}, TOPICS = [], view = 'topics', inDetail = false, STAND = null;
 const bust = () => '?t=' + Math.floor(Date.now() / 60000);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ago = iso => {
@@ -111,16 +125,19 @@ const ago = iso => {
 };
 const clock = iso => new Date(iso).toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
 const total = () => Object.keys(SOURCES).length || 20;
-const langs = t => {
-  const l = [...new Set(t.sources.map(s => SOURCES[s]?.lang).filter(Boolean))];
-  return l.length > 1 ? 'Deutsch und Englisch' : (l[0] === 'en' ? 'Englisch' : '');
-};
-const metaLine = t => [`${t.source_count} Quellen`, langs(t), ago(t.latest)].filter(Boolean).join(' · ');
-const dots = t => `<div class="dots" role="img" aria-label="${t.source_count} von ${total()} Quellen berichten">${
-  Array.from({length: total()}, (_, i) => `<i class="${i < t.source_count ? '' : 'off'}"></i>`).join('')}</div>`;
+const image = t => (t.articles.find(a => a.image) || {});
+const img = (src, cls, alt = '') => src
+  ? `<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '';
+const langs = t => [...new Set(t.sources.map(s => SOURCES[s]?.lang).filter(Boolean))].length > 1;
+const cover = t => `<div class="cover" aria-label="${t.source_count} von ${total()} Quellen berichten">
+  <div class="bar"><i style="width:${Math.round(t.source_count / total() * 100)}%"></i></div>
+  <span>${t.source_count} von ${total()} Quellen</span></div>`;
 
-document.getElementById('today').textContent =
-  new Date().toLocaleDateString('de-DE', {weekday: 'long', day: 'numeric', month: 'long'});
+function setDate() {
+  const d = new Date().toLocaleDateString('de-DE', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'});
+  document.getElementById('date').textContent = d + (STAND ? ' · Stand ' + clock(STAND) : '');
+}
+setDate();
 
 document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => {
   document.querySelectorAll('nav button').forEach(x => x === b ? x.setAttribute('aria-current', 'page') : x.removeAttribute('aria-current'));
@@ -148,61 +165,71 @@ async function render() {
 
 async function renderTopics() {
   const d = await getJSON('topics.json');
-  SOURCES = d.sources; TOPICS = d.topics;
-  document.getElementById('stand').textContent = 'Stand ' + clock(d.stand);
+  SOURCES = d.sources; TOPICS = d.topics; STAND = d.stand; setDate();
   if (!TOPICS.length) { main.innerHTML = '<p class="empty">Gerade berichten keine zwei Quellen über dasselbe Thema.</p>'; return; }
   const [lead, ...rest] = TOPICS;
-  const v = lead.vergleich;
-  const teaser = v?.kern || lead.articles[0]?.summary || '';
+  const v = lead.vergleich, pic = image(lead);
   main.innerHTML = `
     <article class="lead">
-      <div class="kicker">Thema des Tages · ${lead.source_count} von ${total()} Quellen</div>
-      <h2>${esc(lead.title)}</h2>
-      ${dots(lead)}
-      ${teaser ? `<p class="kern">${esc(teaser)}</p>` : ''}
-      ${v?.perspektiven?.length ? `<div class="views">${v.perspektiven.slice(0, 3).map(p =>
-        `<div class="view"><b>${esc(p.quelle)}</b><span>${esc(p.schwerpunkt)}</span></div>`).join('')}</div>` : ''}
-      <button type="button" class="cta" onclick="openTopic(0)">Alle ${lead.articles.length} Berichte vergleichen <span aria-hidden="true">→</span></button>
+      ${pic.image ? `<button type="button" onclick="openTopic(0)" style="display:block;width:100%">${img(pic.image, 'photo', lead.title)}</button>
+      <div class="credit">Foto: ${esc(pic.source)}</div>` : ''}
+      <div class="label">Thema des Tages${langs(lead) ? ' · Deutsch und Englisch' : ''}</div>
+      <button type="button" onclick="openTopic(0)"><h2>${esc(lead.title)}</h2></button>
+      <p class="summary">${esc(v?.kern || lead.articles[0]?.summary || '')}</p>
+      ${cover(lead)}
+      ${v?.perspektiven?.length ? `<ul class="related">${v.perspektiven.slice(0, 3).map(p =>
+        `<li><span class="src">${esc(p.quelle)}</span><span class="txt">${esc(p.schwerpunkt)}</span></li>`).join('')}</ul>` : ''}
+      <button type="button" class="more" onclick="openTopic(0)">Alle ${lead.articles.length} Berichte im Vergleich <span aria-hidden="true">›</span></button>
     </article>
-    ${rest.length ? `<div class="section">Weitere Themen</div>
-    <div class="list">${rest.map((t, i) => `
-      <button type="button" class="row" onclick="openTopic(${i + 1})">
-        <span class="row-title">${esc(t.title)}</span>
-        <span class="meta">${metaLine(t)}</span>
-      </button>`).join('')}</div>` : ''}`;
+    ${rest.length ? `<div class="sec"><h2>Weitere Themen</h2><span>nach Zahl der Quellen</span></div>` : ''}
+    ${rest.map((t, i) => {
+      const p = image(t);
+      return `<button type="button" class="story" onclick="openTopic(${i + 1})">
+        <div class="body">
+          <h3>${esc(t.title)}</h3>
+          <p>${esc(t.vergleich?.kern || t.articles[0]?.summary || '')}</p>
+          <div class="byline"><b>${t.source_count} Quellen</b> · ${ago(t.latest)}${langs(t) ? ' · DE + EN' : ''}</div>
+        </div>
+        ${img(p.image, 'thumb')}
+      </button>`;
+    }).join('')}`;
 }
 
 function openTopic(i) {
   inDetail = true;
-  const t = TOPICS[i], v = t.vergleich;
+  const t = TOPICS[i], v = t.vergleich, pic = image(t);
   const missing = Object.keys(SOURCES).filter(s => !t.sources.includes(s));
   main.innerHTML = `
-    <button type="button" class="back" onclick="render()">‹ Alle Themen</button>
-    <article class="detail">
-      <div class="kicker">${t.source_count} von ${total()} Quellen${langs(t) ? ' · ' + langs(t) : ''}</div>
-      <h2>${esc(t.title)}</h2>
-      ${dots(t)}
-      <div class="block">${v ? `
-        <h3>Gemeinsamer Kern</h3><p>${esc(v.kern)}</p>
-        ${v.perspektiven?.length ? `<h3>Schwerpunkte</h3><div class="persp">${v.perspektiven.map(p =>
-          `<div><b>${esc(p.quelle)}</b><span>${esc(p.schwerpunkt)}</span></div>`).join('')}</div>` : ''}
-        ${v.unterschiede?.length ? `<h3>Unterschiede</h3><ul>${v.unterschiede.map(u => `<li>${esc(u)}</li>`).join('')}</ul>` : ''}
-        ${v.offen ? `<h3>Offen</h3><p>${esc(v.offen)}</p>` : ''}
-        <p class="fine">Vergleich von Claude, nur auf Grundlage von Überschriften und Teasern.</p>`
-      : `<div class="note" style="margin-top:8px">${t.source_count < 3
+    <button type="button" class="back" onclick="render()"><span aria-hidden="true">‹</span> Alle Themen</button>
+    <article class="article">
+      <div class="label">${t.source_count} von ${total()} Quellen${langs(t) ? ' · Deutsch und Englisch' : ''}</div>
+      <h1>${esc(t.title)}</h1>
+      ${v?.kern ? `<p class="dek">${esc(v.kern)}</p>` : ''}
+      ${pic.image ? `${img(pic.image, 'photo', t.title)}<div class="credit">Foto: ${esc(pic.source)}</div>` : ''}
+      ${cover(t)}
+      <div class="text">${v ? `
+        ${v.perspektiven?.length ? `<h3>So berichten die Medien</h3>${v.perspektiven.map(p =>
+          `<p><span class="who">${esc(p.quelle)}</span>${esc(p.schwerpunkt)}</p>`).join('')}` : ''}
+        ${v.unterschiede?.length ? `<h3>Wo sie sich unterscheiden</h3><ul>${v.unterschiede.map(u => `<li>${esc(u)}</li>`).join('')}</ul>` : ''}
+        ${v.offen ? `<h3>Was offen bleibt</h3><p>${esc(v.offen)}</p>` : ''}
+        <div class="pullnote">Vergleich von Claude, nur auf Grundlage von Überschriften und Teasern der Medien.</div>`
+      : `<div class="box">${t.source_count < 3
           ? 'Ein Perspektivvergleich entsteht, sobald mindestens drei Quellen berichten.'
           : 'Der Perspektivvergleich wird beim nächsten Lauf erstellt.'}</div>`}
       </div>
-      <div class="section">Die Berichte</div>
-      <div>${t.articles.map(a => `
-        <a class="art" href="${esc(a.link)}" target="_blank" rel="noopener">
-          <span class="src">${esc(a.source)} <span>· ${ago(a.published)}</span></span>
-          <span class="t">${esc(a.title)}</span>
-          ${a.summary ? `<p>${esc(a.summary)}</p>` : ''}
-        </a>`).join('')}</div>
-      ${missing.length ? `<div class="section">Nicht berichtet von</div>
-        <div class="missing" style="padding-top:12px">${missing.map(s => `<span>${esc(s)}</span>`).join('')}</div>
-        <p class="fine">Oder dort unter anderem Blickwinkel, der nicht als dasselbe Thema erkannt wurde.</p>` : ''}
+      <div class="sec"><h2>Die Berichte</h2><span>Links zu den Verlagen</span></div>
+      ${t.articles.map(a => `
+        <a class="story" href="${esc(a.link)}" target="_blank" rel="noopener">
+          <div class="body">
+            <div class="label" style="margin-bottom:4px">${esc(a.source)}</div>
+            <h3>${esc(a.title)}</h3>
+            ${a.summary ? `<p>${esc(a.summary)}</p>` : ''}
+            <div class="byline">${ago(a.published)}</div>
+          </div>
+          ${img(a.image, 'thumb')}
+        </a>`).join('')}
+      ${missing.length ? `<div class="sec"><h2>Nicht berichtet</h2><span>oder nicht als Thema erkannt</span></div>
+        <p class="missing">${missing.map(esc).join(' · ')}</p>` : ''}
     </article>`;
   window.scrollTo(0, 0);
 }
@@ -210,11 +237,15 @@ function openTopic(i) {
 async function renderLatest() {
   const d = await getJSON('latest.json');
   if (!d.articles.length) { main.innerHTML = '<p class="empty">Noch keine Meldungen.</p>'; return; }
-  main.innerHTML = '<div style="padding-top:6px">' + d.articles.map(a => `
-    <a class="art" href="${esc(a.link)}" target="_blank" rel="noopener">
-      <span class="src">${esc(a.source)} <span>· ${ago(a.published)}</span></span>
-      <span class="t">${esc(a.title)}</span>
-    </a>`).join('') + '</div>';
+  main.innerHTML = `<div class="sec"><h2>Neueste Meldungen</h2><span>alle Quellen</span></div>` + d.articles.map(a => `
+    <a class="story" href="${esc(a.link)}" target="_blank" rel="noopener">
+      <span class="time">${clock(a.published)}</span>
+      <div class="body">
+        <div class="label" style="margin-bottom:4px">${esc(a.source)}</div>
+        <h3 style="font-size:17px">${esc(a.title)}</h3>
+      </div>
+      ${img(a.image, 'thumb')}
+    </a>`).join('');
 }
 
 async function renderStatus() {
@@ -223,13 +254,12 @@ async function renderStatus() {
   const feeds = Object.entries(d.feeds);
   const ok = feeds.filter(([, s]) => s.ok).length;
   main.innerHTML = `
-    <div class="section">Ausgabe</div>
-    <div class="status"><span>Letzter Lauf</span><span class="ok">${ago(d.stand)}</span></div>
-    <div class="status"><span>Themen-Abgleich</span><span class="${a.aktiv ? 'ok' : 'bad'}">${a.aktiv ? 'nach Bedeutung' : 'nur nach Wörtern'}</span></div>
-    <div class="status"><span>Perspektivvergleich</span><span class="${d.vergleich ? 'ok' : 'bad'}">${d.vergleich ? 'aktiv' : 'kein Schlüssel'}</span></div>
-    <div class="section">Quellen · ${ok} von ${feeds.length} erreichbar</div>
+    <div class="sec"><h2>Ausgabe</h2><span>${ago(d.stand)}</span></div>
+    <div class="row"><span>Themen-Abgleich</span><span class="${a.aktiv ? 'ok' : 'bad'}">${a.aktiv ? 'nach Bedeutung' : 'nur nach Wörtern'}</span></div>
+    <div class="row"><span>Perspektivvergleich</span><span class="${d.vergleich ? 'ok' : 'bad'}">${d.vergleich ? 'aktiv' : 'kein Schlüssel'}</span></div>
+    <div class="sec"><h2>Quellen</h2><span>${ok} von ${feeds.length} erreichbar</span></div>
     ${feeds.map(([name, s]) => `
-      <div class="status">
+      <div class="row">
         <span>${esc(name)}${s.error ? `<small>${esc(s.error)}</small>` : ''}</span>
         <span class="${s.ok ? 'ok' : 'bad'}">${s.ok ? `${s.count} Meldungen` : 'Fehler'}</span>
       </div>`).join('')}`;
