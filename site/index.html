@@ -93,6 +93,19 @@ main{padding-bottom:56px}
 .row small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
 .ok{color:var(--muted)} .bad{color:#C0392B;font-weight:600}
 @media (prefers-color-scheme:dark){.bad{color:#F08A7E}}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;padding:8px 0;border-bottom:1px solid var(--rule);cursor:pointer}
+.toggle .name{font:600 17px/1.25 var(--serif)}
+.toggle .name.off{color:var(--muted);font-weight:400}
+.toggle small{display:block;font:400 12px/1.4 var(--sans);color:var(--muted);margin-top:2px}
+.toggle small.bad{color:#C0392B;font-weight:600}
+.switch{appearance:none;-webkit-appearance:none;flex:0 0 auto;width:51px;height:31px;border-radius:999px;background:var(--rule);position:relative;margin:0;cursor:pointer;transition:background .15s}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+.switch:checked{background:var(--ink)}
+.switch:checked::after{transform:translateX(20px)}
+.switch:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+@media (prefers-color-scheme:dark){.switch:checked::after{background:#121212}}
+.quick{display:flex;gap:18px;padding:10px 0 2px}
+.quick button{min-height:44px;font-size:13px;font-weight:700;text-decoration:underline;text-underline-offset:3px}
 .empty{padding:56px 0;text-align:center;color:var(--muted);font:italic 17px/1.5 var(--serif)}
 </style>
 </head>
@@ -114,7 +127,29 @@ main{padding-bottom:56px}
 
 <script>
 const main = document.getElementById('main');
-let SOURCES = {}, TOPICS = [], view = 'topics', inDetail = false, STAND = null;
+let SOURCES = {}, RAW = [], TOPICS = [], view = 'topics', inDetail = false, STAND = null;
+let OFF = new Set();
+try { OFF = new Set(JSON.parse(localStorage.getItem('nl_off') || '[]')); } catch (e) {}
+const saveOff = () => { try { localStorage.setItem('nl_off', JSON.stringify([...OFF])); } catch (e) {} };
+const active = () => Object.keys(SOURCES).filter(s => !OFF.has(s));
+const on = s => !OFF.has(s);
+
+// Themen auf die gewählten Quellen zuschneiden
+function applyFilter(raw) {
+  return raw.map(t => {
+    const articles = t.articles.filter(a => on(a.source));
+    const sources = t.sources.filter(on);
+    let vergleich = t.vergleich;
+    if (vergleich?.perspektiven) {
+      vergleich = {...vergleich, perspektiven: vergleich.perspektiven.filter(p => on(p.quelle))};
+    }
+    const title = articles.some(a => a.title === t.title) ? t.title
+      : (articles.find(a => SOURCES[a.source]?.lang === 'de') || articles[0] || {}).title;
+    return {...t, title, articles, sources, source_count: sources.length, vergleich,
+            latest: articles[0]?.published || t.latest};
+  }).filter(t => t.source_count >= 2)
+    .sort((a, b) => b.source_count - a.source_count || (b.latest > a.latest ? 1 : -1));
+}
 const bust = () => '?t=' + Math.floor(Date.now() / 60000);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ago = iso => {
@@ -124,7 +159,7 @@ const ago = iso => {
   return h < 24 ? `vor ${h} Std.` : `vor ${Math.round(h / 24)} Tg.`;
 };
 const clock = iso => new Date(iso).toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
-const total = () => Object.keys(SOURCES).length || 20;
+const total = () => active().length || 1;
 const image = t => (t.articles.find(a => a.image) || {});
 const img = (src, cls, alt = '') => src
   ? `<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '';
@@ -165,8 +200,10 @@ async function render() {
 
 async function renderTopics() {
   const d = await getJSON('topics.json');
-  SOURCES = d.sources; TOPICS = d.topics; STAND = d.stand; setDate();
-  if (!TOPICS.length) { main.innerHTML = '<p class="empty">Gerade berichten keine zwei Quellen über dasselbe Thema.</p>'; return; }
+  SOURCES = d.sources; RAW = d.topics; STAND = d.stand; setDate();
+  TOPICS = applyFilter(RAW);
+  if (active().length < 2) { main.innerHTML = '<p class="empty">Wähle unter „Quellen“ mindestens zwei Medien aus.</p>'; return; }
+  if (!TOPICS.length) { main.innerHTML = '<p class="empty">Gerade berichten keine zwei deiner Quellen über dasselbe Thema.</p>'; return; }
   const [lead, ...rest] = TOPICS;
   const v = lead.vergleich, pic = image(lead);
   main.innerHTML = `
@@ -198,7 +235,7 @@ async function renderTopics() {
 function openTopic(i) {
   inDetail = true;
   const t = TOPICS[i], v = t.vergleich, pic = image(t);
-  const missing = Object.keys(SOURCES).filter(s => !t.sources.includes(s));
+  const missing = active().filter(s => !t.sources.includes(s));
   main.innerHTML = `
     <button type="button" class="back" onclick="render()"><span aria-hidden="true">‹</span> Alle Themen</button>
     <article class="article">
@@ -212,7 +249,7 @@ function openTopic(i) {
           `<p><span class="who">${esc(p.quelle)}</span>${esc(p.schwerpunkt)}</p>`).join('')}` : ''}
         ${v.unterschiede?.length ? `<h3>Wo sie sich unterscheiden</h3><ul>${v.unterschiede.map(u => `<li>${esc(u)}</li>`).join('')}</ul>` : ''}
         ${v.offen ? `<h3>Was offen bleibt</h3><p>${esc(v.offen)}</p>` : ''}
-        <div class="pullnote">Vergleich von Claude, nur auf Grundlage von Überschriften und Teasern der Medien.</div>`
+        <div class="pullnote">Vergleich von Claude, nur auf Grundlage von Überschriften und Teasern der Medien.${OFF.size ? ' Der gemeinsame Kern kann auch abgewählte Quellen einbeziehen.' : ''}</div>`
       : `<div class="box">${t.source_count < 3
           ? 'Ein Perspektivvergleich entsteht, sobald mindestens drei Quellen berichten.'
           : 'Der Perspektivvergleich wird beim nächsten Lauf erstellt.'}</div>`}
@@ -236,6 +273,7 @@ function openTopic(i) {
 
 async function renderLatest() {
   const d = await getJSON('latest.json');
+  d.articles = d.articles.filter(a => on(a.source));
   if (!d.articles.length) { main.innerHTML = '<p class="empty">Noch keine Meldungen.</p>'; return; }
   main.innerHTML = `<div class="sec"><h2>Neueste Meldungen</h2><span>alle Quellen</span></div>` + d.articles.map(a => `
     <a class="story" href="${esc(a.link)}" target="_blank" rel="noopener">
@@ -249,20 +287,50 @@ async function renderLatest() {
 }
 
 async function renderStatus() {
-  const d = await getJSON('status.json');
+  const [d, tp] = await Promise.all([getJSON('status.json'), getJSON('topics.json').catch(() => null)]);
+  if (tp) SOURCES = tp.sources;
   const a = d.abgleich || {};
-  const feeds = Object.entries(d.feeds);
-  const ok = feeds.filter(([, s]) => s.ok).length;
+  const names = Object.keys(d.feeds);
+  const group = lang => names.filter(n => (SOURCES[n]?.lang || 'de') === lang);
+  const row = n => {
+    const s = d.feeds[n] || {}, info = SOURCES[n] || {};
+    const detail = s.ok === false ? `<small class="bad">Feed nicht erreichbar</small>`
+      : `<small>${esc(info.type || '')}${s.ok ? ` · ${s.count} Meldungen` : ''}</small>`;
+    return `<label class="toggle">
+      <span><span class="name ${on(n) ? '' : 'off'}">${esc(n)}</span>${detail}</span>
+      <input type="checkbox" class="switch" data-src="${esc(n)}" ${on(n) ? 'checked' : ''} aria-label="${esc(n)} anzeigen">
+    </label>`;
+  };
+  const de = group('de'), en = group('en');
   main.innerHTML = `
+    <div class="sec"><h2>Deine Quellen</h2><span id="count"></span></div>
+    <div class="quick">
+      <button type="button" data-all="1">Alle an</button>
+      <button type="button" data-all="0">Alle aus</button>
+    </div>
+    ${de.length ? `<div class="sec"><h2>Deutschsprachig</h2><span>${de.length}</span></div>${de.map(row).join('')}` : ''}
+    ${en.length ? `<div class="sec"><h2>International</h2><span>${en.length}</span></div>${en.map(row).join('')}` : ''}
     <div class="sec"><h2>Ausgabe</h2><span>${ago(d.stand)}</span></div>
     <div class="row"><span>Themen-Abgleich</span><span class="${a.aktiv ? 'ok' : 'bad'}">${a.aktiv ? 'nach Bedeutung' : 'nur nach Wörtern'}</span></div>
     <div class="row"><span>Perspektivvergleich</span><span class="${d.vergleich ? 'ok' : 'bad'}">${d.vergleich ? 'aktiv' : 'kein Schlüssel'}</span></div>
-    <div class="sec"><h2>Quellen</h2><span>${ok} von ${feeds.length} erreichbar</span></div>
-    ${feeds.map(([name, s]) => `
-      <div class="row">
-        <span>${esc(name)}${s.error ? `<small>${esc(s.error)}</small>` : ''}</span>
-        <span class="${s.ok ? 'ok' : 'bad'}">${s.ok ? `${s.count} Meldungen` : 'Fehler'}</span>
-      </div>`).join('')}`;
+    <p class="row" style="border:0;color:var(--muted);font-size:12px">Die Auswahl gilt nur auf diesem Gerät. Gesammelt werden weiterhin alle Quellen, damit du jederzeit umschalten kannst.</p>`;
+  const count = () => { document.getElementById('count').textContent = `${names.filter(on).length} von ${names.length} aktiv`; };
+  count();
+  main.querySelectorAll('.switch').forEach(sw => sw.addEventListener('change', () => {
+    const n = sw.dataset.src;
+    sw.checked ? OFF.delete(n) : OFF.add(n);
+    sw.closest('.toggle').querySelector('.name').classList.toggle('off', !sw.checked);
+    saveOff(); count();
+  }));
+  main.querySelectorAll('[data-all]').forEach(b => b.addEventListener('click', () => {
+    const all = b.dataset.all === '1';
+    OFF = all ? new Set() : new Set(names);
+    main.querySelectorAll('.switch').forEach(sw => {
+      sw.checked = all;
+      sw.closest('.toggle').querySelector('.name').classList.toggle('off', !all);
+    });
+    saveOff(); count();
+  }));
 }
 
 render();
