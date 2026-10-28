@@ -173,7 +173,7 @@ async function renderStatus() {
       <span class="${a.aktiv ? 'ok' : 'meta'}">· ${a.aktiv ? 'nach Bedeutung, sprachübergreifend' : 'nach Wörtern'}</span>
       ${a.aktiv ? '' : `<p class="meta" style="margin:4px 0 0">Das Sprachmodell konnte im GitHub-Job nicht geladen werden.${a.fehler ? ' (' + esc(a.fehler) + ')' : ''}</p>`}
       <div style="margin-top:8px"><b>Perspektivvergleich</b>
-      <span class="${d.vergleich ? 'ok' : 'meta'}">· ${d.vergleich ? 'aktiv' : 'aus (kein ANTHROPIC_API_KEY als Secret)'}</span></div>
+      <span class="${d.vergleich ? 'ok' : 'meta'}">· ${d.vergleich ? 'aktiv' : 'aus (kein HENDRIK_API_KEY als Secret)'}</span></div>
       <div class="meta" style="margin-top:8px">Letzter Lauf: ${ago(d.stand)}</div>
     </div>
     <div class="card">` + Object.entries(d.feeds).map(([name, s]) => `

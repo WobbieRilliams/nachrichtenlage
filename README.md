@@ -26,7 +26,7 @@ Am bequemsten am Computer, geht aber auch im Browser auf dem iPhone.
 
 4. **Claude-Schlüssel hinterlegen** (für den Perspektivvergleich):
    „Settings“ → „Secrets and variables“ → „Actions“ → „New repository secret“.
-   Name `ANTHROPIC_API_KEY`, Wert dein Schlüssel von console.anthropic.com.
+   Name `HENDRIK_API_KEY`, Wert dein Schlüssel von console.anthropic.com.
    Der Schlüssel bleibt geheim, auch im öffentlichen Repository.
 
 5. **Ersten Lauf starten:** Tab „Actions“ → „Nachrichten aktualisieren“ → „Run workflow“.

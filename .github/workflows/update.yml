@@ -52,7 +52,7 @@ jobs:
       - name: Feeds holen, Themen bilden, Seite bauen
         run: python build.py
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.HENDRIK_API_KEY }}
 
       - name: Meldungen für den nächsten Lauf sichern
         if: always()
