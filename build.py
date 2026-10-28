@@ -112,14 +112,14 @@ print(f"{done} neue Vergleiche erstellt")
 # 4) Webseite schreiben
 for t in topics:
     for a in t["articles"]:
-        a["summary"] = (a.get("summary") or "")[:240]
+        a["summary"] = (a.get("summary") or "")[:1500]
 sources = {name: {"short": short, "type": typ, "lang": lang} for name, short, typ, lang, _ in FEEDS}
 latest = sorted(recent, key=lambda a: a["published"], reverse=True)[:150]
 
 shutil.rmtree(OUT, ignore_errors=True)
 shutil.copytree("site", OUT)
 save(OUT, "topics.json", {"topics": topics, "sources": sources, "stand": now.isoformat()})
-save(OUT, "latest.json", {"articles": [{k: (a.get(k) or "")[:200] if k == "summary" else a.get(k) for k in ("source", "title", "link", "published", "image", "summary")} for a in latest]})
+save(OUT, "latest.json", {"articles": [{k: (a.get(k) or "")[:1500] if k == "summary" else a.get(k) for k in ("source", "title", "link", "published", "image", "summary")} for a in latest]})
 save(OUT, "status.json", {
     "feeds": status,
     "abgleich": embed.status(),

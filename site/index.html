@@ -87,6 +87,19 @@ main{padding-bottom:56px}
 .box{background:var(--chip);padding:14px 16px;font-size:14px;color:var(--ink-2);margin-top:8px}
 .missing{margin:10px 0 0;font:400 15px/1.6 var(--serif);color:var(--muted)}
 
+.item{border-bottom:1px solid var(--rule)}
+.item > summary{list-style:none;cursor:pointer;border-bottom:0}
+.item > summary::-webkit-details-marker{display:none}
+.item > summary.story{border-bottom:0}
+.item .chev{flex:0 0 auto;align-self:center;font-size:18px;color:var(--muted);transition:transform .15s}
+.item[open] .chev{transform:rotate(90deg)}
+.item[open] > summary .clamp,.item[open] > summary .thumb{display:none}
+.expand{padding:0 0 18px}
+.expand .photo{margin-bottom:12px}
+.expand p{margin:0 0 12px;font:400 18px/1.55 var(--serif)}
+.expand .short{font-size:13px;color:var(--muted);margin:0 0 12px}
+.readon{display:flex;align-items:center;justify-content:center;gap:6px;min-height:46px;border:1px solid var(--ink);font-size:14px;font-weight:700}
+.readon:active{background:var(--chip)}
 .time{flex:0 0 44px;font-size:12px;font-weight:600;color:var(--muted);padding-top:3px}
 
 .row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--rule);font-size:14px}
@@ -232,6 +245,37 @@ async function renderTopics() {
     }).join('')}`;
 }
 
+// Ein Bericht, der sich antippen und aufklappen lässt
+function paragraphs(text) {
+  const sents = (text || '').match(/[^.!?]+[.!?]+["“”«»]?\s*|[^.!?]+$/g) || [];
+  const out = []; let cur = '';
+  for (const s of sents) { cur += s; if (cur.length > 280) { out.push(cur.trim()); cur = ''; } }
+  if (cur.trim()) out.push(cur.trim());
+  return out.map(x => `<p>${esc(x)}</p>`).join('');
+}
+function report(a, opts = {}) {
+  const text = a.summary || '';
+  return `<details class="item">
+    <summary class="story">
+      ${opts.time ? `<span class="time">${clock(a.published)}</span>` : ''}
+      <div class="body">
+        <div class="label" style="margin-bottom:4px">${esc(a.source)}</div>
+        <h3${opts.time ? ' style="font-size:17px"' : ''}>${esc(a.title)}</h3>
+        ${text && !opts.time ? `<p class="clamp">${esc(text)}</p>` : ''}
+        <div class="byline">${ago(a.published)}</div>
+      </div>
+      ${img(a.image, 'thumb')}
+      <span class="chev" aria-hidden="true">›</span>
+    </summary>
+    <div class="expand">
+      ${img(a.image, 'photo', a.title)}
+      ${text ? paragraphs(text) : '<p class="short">Dieser Feed liefert nur die Überschrift.</p>'}
+      ${text && text.length < 300 ? '<p class="short">Mehr liefert der Feed dieses Mediums nicht.</p>' : ''}
+      <a class="readon" href="${esc(a.link)}" target="_blank" rel="noopener">Bei ${esc(a.source)} weiterlesen <span aria-hidden="true">↗</span></a>
+    </div>
+  </details>`;
+}
+
 function openTopic(i) {
   inDetail = true;
   const t = TOPICS[i], v = t.vergleich, pic = image(t);
@@ -254,17 +298,8 @@ function openTopic(i) {
           ? 'Ein Perspektivvergleich entsteht, sobald mindestens drei Quellen berichten.'
           : 'Der Perspektivvergleich wird beim nächsten Lauf erstellt.'}</div>`}
       </div>
-      <div class="sec"><h2>Die Berichte</h2><span>Links zu den Verlagen</span></div>
-      ${t.articles.map(a => `
-        <a class="story" href="${esc(a.link)}" target="_blank" rel="noopener">
-          <div class="body">
-            <div class="label" style="margin-bottom:4px">${esc(a.source)}</div>
-            <h3>${esc(a.title)}</h3>
-            ${a.summary ? `<p>${esc(a.summary)}</p>` : ''}
-            <div class="byline">${ago(a.published)}</div>
-          </div>
-          ${img(a.image, 'thumb')}
-        </a>`).join('')}
+      <div class="sec"><h2>Die Berichte</h2><span>zum Aufklappen antippen</span></div>
+      ${t.articles.map(a => report(a)).join('')}
       ${missing.length ? `<div class="sec"><h2>Nicht berichtet</h2><span>oder nicht als Thema erkannt</span></div>
         <p class="missing">${missing.map(esc).join(' · ')}</p>` : ''}
     </article>`;
@@ -275,15 +310,7 @@ async function renderLatest() {
   const d = await getJSON('latest.json');
   d.articles = d.articles.filter(a => on(a.source));
   if (!d.articles.length) { main.innerHTML = '<p class="empty">Noch keine Meldungen.</p>'; return; }
-  main.innerHTML = `<div class="sec"><h2>Neueste Meldungen</h2><span>alle Quellen</span></div>` + d.articles.map(a => `
-    <a class="story" href="${esc(a.link)}" target="_blank" rel="noopener">
-      <span class="time">${clock(a.published)}</span>
-      <div class="body">
-        <div class="label" style="margin-bottom:4px">${esc(a.source)}</div>
-        <h3 style="font-size:17px">${esc(a.title)}</h3>
-      </div>
-      ${img(a.image, 'thumb')}
-    </a>`).join('');
+  main.innerHTML = `<div class="sec"><h2>Neueste Meldungen</h2><span>alle deine Quellen</span></div>` + d.articles.map(a => report(a, {time: true})).join('');
 }
 
 async function renderStatus() {

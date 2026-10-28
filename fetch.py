@@ -82,12 +82,14 @@ def parse_feed(name, data):
         title = _clean(_text(e, "title"))
         if not link or not title:
             continue
-        summary = _text(e, "description", "summary", "encoded", "content")
+        # Manche Feeds liefern neben dem Teaser einen längeren Text (content:encoded) – den längsten nehmen
+        texts = [_clean(c.text or "") for c in e if _local(c.tag) in ("description", "summary", "encoded", "content")]
+        summary = max(texts, key=len) if texts else ""
         items.append({
             "id": hashlib.sha1(link.encode()).hexdigest()[:16],
             "source": name,
             "title": title,
-            "summary": _clean(summary)[:600],
+            "summary": summary[:1500],
             "link": link,
             "image": _image(e),
             "published": _date(_text(e, "pubdate", "published", "updated", "date")).isoformat(),
