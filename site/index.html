@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Lage">
+<link rel="manifest" href="manifest.json">
+<meta name="robots" content="noindex, nofollow">
+<title>Nachrichtenlage</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--text:#1c1c1a;--muted:#6b6a64;--line:#e4e2da;--accent:#1f5fa8;--accent-bg:#e6f0fb;--warn:#8a5a0b;--warn-bg:#faf0dc;--ok:#2e7d32;--bad:#c62828}
+@media (prefers-color-scheme:dark){:root{--bg:#121211;--card:#1d1d1b;--text:#ecebe6;--muted:#9b9a93;--line:#2e2e2b;--accent:#86b6ec;--accent-bg:#14304f;--warn:#f0c27a;--warn-bg:#3a2a0e;--ok:#81c784;--bad:#ef9a9a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;padding-bottom:env(safe-area-inset-bottom)}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(env(safe-area-inset-top) + 12px) 16px 8px;border-bottom:1px solid var(--line)}
+h1{font-size:24px;margin:0 0 8px;font-weight:700;letter-spacing:-.02em}
+nav{display:flex;gap:6px}
+nav button{flex:1;padding:8px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;font:inherit;font-size:14px}
+nav button.on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+main{padding:12px 16px 40px;max-width:720px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:0 0 10px}
+.card h2{font-size:17px;line-height:1.35;margin:0 0 8px;font-weight:600}
+.meta{font-size:13px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.chip{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--accent-bg);color:var(--accent)}
+.chip.off{background:transparent;border:1px dashed var(--line);color:var(--muted)}
+.bar{height:5px;background:var(--line);border-radius:3px;margin:8px 0 4px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.art{padding:10px 0;border-top:1px solid var(--line)}
+.art:first-child{border-top:0;padding-top:0}
+.art a{color:var(--text);text-decoration:none;font-weight:600}
+.art p{margin:4px 0 0;font-size:14px;color:var(--muted)}
+.src{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em}
+.src span{text-transform:none;font-weight:400;color:var(--muted);letter-spacing:0}
+.btn{display:block;width:100%;padding:12px;border-radius:12px;border:0;background:var(--accent);color:var(--bg);font:inherit;font-weight:600;margin:12px 0 0}
+.btn:disabled{opacity:.6}
+.back{background:none;border:0;color:var(--accent);font:inherit;padding:4px 0;margin:0 0 10px}
+.cmp h3{font-size:12px;margin:16px 0 4px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.cmp p{margin:0}
+.cmp ul{margin:0;padding-left:18px}
+.cmp li{margin:4px 0}
+.note{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:14px;margin-top:12px}
+.empty{color:var(--muted);text-align:center;padding:40px 10px}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+.card.tap{cursor:pointer}
+</style>
+</head>
+<body>
+<header>
+  <h1>Nachrichtenlage</h1>
+  <nav>
+    <button data-view="topics" class="on">Themen</button>
+    <button data-view="latest">Neueste</button>
+    <button data-view="status">Quellen</button>
+  </nav>
+</header>
+<main id="main"><div class="empty">Lade …</div></main>
+<script>
+const main = document.getElementById('main');
+let SOURCES = {}, TOPICS = [], view = 'topics';
+const bust = () => '?t=' + Math.floor(Date.now() / 60000);
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ago = iso => {
+  const m = Math.round((Date.now() - new Date(iso)) / 60000);
+  if (m < 60) return `vor ${Math.max(m, 1)} Min.`;
+  const h = Math.round(m / 60);
+  return h < 24 ? `vor ${h} Std.` : `vor ${Math.round(h / 24)} Tg.`;
+};
+const short = s => SOURCES[s]?.short || s;
+const langs = t => {
+  const l = [...new Set(t.sources.map(s => SOURCES[s]?.lang).filter(Boolean))];
+  return l.length > 1 ? ' · ' + l.map(x => x.toUpperCase()).join(' + ') : '';
+};
+
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
+  view = b.dataset.view;
+  render();
+});
+
+async function getJSON(url) {
+  const r = await fetch(url + bust());
+  return r.json();
+}
+
+async function render() {
+  window.scrollTo(0, 0);
+  try {
+    if (view === 'topics') await renderTopics();
+    else if (view === 'latest') await renderLatest();
+    else await renderStatus();
+  } catch (e) {
+    main.innerHTML = '<div class="note">Daten noch nicht verfügbar. Der erste Lauf des GitHub-Jobs dauert ein paar Minuten.</div>';
+  }
+}
+
+async function renderTopics() {
+  const d = await getJSON('topics.json');
+  SOURCES = d.sources;
+  TOPICS = d.topics;
+  const stand = `<div class="meta" style="margin:0 0 10px">Stand: ${ago(d.stand)}</div>`;
+  const total = Object.keys(SOURCES).length;
+  if (!TOPICS.length) {
+    main.innerHTML = '<div class="empty">Noch keine Themen mit mehreren Quellen.</div>';
+    return;
+  }
+  main.innerHTML = stand + TOPICS.map((t, i) => `
+    <div class="card tap" onclick="openTopic(${i})">
+      <h2>${esc(t.title)}</h2>
+      <div class="bar"><i style="width:${Math.round(t.source_count / total * 100)}%"></i></div>
+      <div class="meta">${t.source_count} von ${total} Quellen · ${t.articles.length} Meldungen · ${ago(t.latest)}${langs(t)}</div>
+      <div class="chips">${t.sources.map(s => `<span class="chip">${esc(short(s))}</span>`).join('')}</div>
+    </div>`).join('');
+}
+
+function openTopic(i) {
+  const t = TOPICS[i];
+  const missing = Object.keys(SOURCES).filter(s => !t.sources.includes(s));
+  main.innerHTML = `
+    <button class="back" onclick="render()">‹ Alle Themen</button>
+    <div class="card">
+      <h2>${esc(t.title)}</h2>
+      <div class="meta">${t.source_count} Quellen · ${t.articles.length} Meldungen</div>
+      <div class="cmp">${renderCompare(t)}</div>
+    </div>
+    <div class="card">
+      ${t.articles.map(a => `
+        <div class="art">
+          <div class="src">${esc(a.source)} <span>· ${ago(a.published)}</span></div>
+          <a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.title)}</a>
+          ${a.summary ? `<p>${esc(a.summary.slice(0, 220))}${a.summary.length > 220 ? ' …' : ''}</p>` : ''}
+        </div>`).join('')}
+    </div>
+    ${missing.length ? `<div class="card"><div class="meta">Nicht (oder nicht erkannt) berichtet von:</div>
+      <div class="chips">${missing.map(s => `<span class="chip off">${esc(s)}</span>`).join('')}</div></div>` : ''}`;
+  window.scrollTo(0, 0);
+}
+
+function renderCompare(t) {
+  const d = t.vergleich;
+  if (!d) {
+    return `<div class="note">${t.source_count < 3
+      ? 'Ein Perspektivvergleich entsteht, sobald mindestens drei Quellen berichten.'
+      : 'Der Vergleich wird beim nächsten Lauf erstellt.'}</div>`;
+  }
+  return `
+    <h3>Gemeinsamer Kern</h3><p>${esc(d.kern)}</p>
+    ${(d.perspektiven || []).length ? `<h3>Schwerpunkte</h3><ul>${d.perspektiven.map(p => `<li><b>${esc(p.quelle)}:</b> ${esc(p.schwerpunkt)}</li>`).join('')}</ul>` : ''}
+    ${(d.unterschiede || []).length ? `<h3>Unterschiede</h3><ul>${d.unterschiede.map(u => `<li>${esc(u)}</li>`).join('')}</ul>` : ''}
+    ${d.offen ? `<h3>Offen</h3><p>${esc(d.offen)}</p>` : ''}
+    <p class="meta" style="margin-top:12px">Von Claude, basiert nur auf Überschriften und Teasern.</p>`;
+}
+
+async function renderLatest() {
+  const d = await getJSON('latest.json');
+  SOURCES = d.sources;
+  if (!d.articles.length) { main.innerHTML = '<div class="empty">Noch keine Meldungen.</div>'; return; }
+  main.innerHTML = '<div class="card">' + d.articles.map(a => `
+    <div class="art">
+      <div class="src">${esc(a.source)} <span>· ${ago(a.published)}</span></div>
+      <a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.title)}</a>
+    </div>`).join('') + '</div>';
+}
+
+async function renderStatus() {
+  const d = await getJSON('status.json');
+  const a = d.abgleich || {};
+  main.innerHTML = `<div class="card">
+      <b>Themen-Abgleich</b>
+      <span class="${a.aktiv ? 'ok' : 'meta'}">· ${a.aktiv ? 'nach Bedeutung, sprachübergreifend' : 'nach Wörtern'}</span>
+      ${a.aktiv ? '' : `<p class="meta" style="margin:4px 0 0">Das Sprachmodell konnte im GitHub-Job nicht geladen werden.${a.fehler ? ' (' + esc(a.fehler) + ')' : ''}</p>`}
+      <div style="margin-top:8px"><b>Perspektivvergleich</b>
+      <span class="${d.vergleich ? 'ok' : 'meta'}">· ${d.vergleich ? 'aktiv' : 'aus (kein ANTHROPIC_API_KEY als Secret)'}</span></div>
+      <div class="meta" style="margin-top:8px">Letzter Lauf: ${ago(d.stand)}</div>
+    </div>
+    <div class="card">` + Object.entries(d.feeds).map(([name, s]) => `
+    <div class="art">
+      <b>${esc(name)}</b>
+      <span class="${s.ok ? 'ok' : s.ok === false ? 'bad' : 'meta'}">
+        ${s.ok ? `· ${s.count} Meldungen, ${s.neu} neu` : s.ok === false ? '· Fehler' : '· noch nicht abgerufen'}</span>
+      ${s.error ? `<p>${esc(s.error)}</p>` : ''}
+    </div>`).join('') + '</div>';
+}
+
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "name": "Nachrichtenlage",
+  "short_name": "Lage",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f6f5f1",
+  "theme_color": "#f6f5f1"
+}
