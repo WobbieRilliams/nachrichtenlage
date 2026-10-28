@@ -3,65 +3,105 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Lage">
+<meta name="apple-mobile-web-app-title" content="Die Lage">
+<meta name="theme-color" content="#FCFCFA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141413" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.json">
-<meta name="robots" content="noindex, nofollow">
-<title>Nachrichtenlage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Die Lage</title>
 <style>
-:root{--bg:#f6f5f1;--card:#fff;--text:#1c1c1a;--muted:#6b6a64;--line:#e4e2da;--accent:#1f5fa8;--accent-bg:#e6f0fb;--warn:#8a5a0b;--warn-bg:#faf0dc;--ok:#2e7d32;--bad:#c62828}
-@media (prefers-color-scheme:dark){:root{--bg:#121211;--card:#1d1d1b;--text:#ecebe6;--muted:#9b9a93;--line:#2e2e2b;--accent:#86b6ec;--accent-bg:#14304f;--warn:#f0c27a;--warn-bg:#3a2a0e;--ok:#81c784;--bad:#ef9a9a}}
+:root{
+  --paper:#FCFCFA; --ink:#161616; --ink-2:#2B2B29; --muted:#5C5C58; --rule:#DCDAD4; --rule-strong:#161616;
+  --accent:#B23A0B; --dot-off:#B9B7B0; --note:#F4F1EA;
+  --serif:'Newsreader',Georgia,'Times New Roman',serif; --sans:'Public Sans',-apple-system,system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#141413; --ink:#EDEBE5; --ink-2:#D6D4CD; --muted:#A3A19A; --rule:#34332F; --rule-strong:#EDEBE5;
+  --accent:#F08A5D; --dot-off:#55534E; --note:#1F1E1C;
+}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;padding-bottom:env(safe-area-inset-bottom)}
-header{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(env(safe-area-inset-top) + 12px) 16px 8px;border-bottom:1px solid var(--line)}
-h1{font-size:24px;margin:0 0 8px;font-weight:700;letter-spacing:-.02em}
-nav{display:flex;gap:6px}
-nav button{flex:1;padding:8px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;font:inherit;font-size:14px}
-nav button.on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
-main{padding:12px 16px 40px;max-width:720px;margin:0 auto}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:0 0 10px}
-.card h2{font-size:17px;line-height:1.35;margin:0 0 8px;font-weight:600}
-.meta{font-size:13px;color:var(--muted)}
-.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
-.chip{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--accent-bg);color:var(--accent)}
-.chip.off{background:transparent;border:1px dashed var(--line);color:var(--muted)}
-.bar{height:5px;background:var(--line);border-radius:3px;margin:8px 0 4px;overflow:hidden}
-.bar i{display:block;height:100%;background:var(--accent)}
-.art{padding:10px 0;border-top:1px solid var(--line)}
-.art:first-child{border-top:0;padding-top:0}
-.art a{color:var(--text);text-decoration:none;font-weight:600}
-.art p{margin:4px 0 0;font-size:14px;color:var(--muted)}
-.src{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em}
-.src span{text-transform:none;font-weight:400;color:var(--muted);letter-spacing:0}
-.btn{display:block;width:100%;padding:12px;border-radius:12px;border:0;background:var(--accent);color:var(--bg);font:inherit;font-weight:600;margin:12px 0 0}
-.btn:disabled{opacity:.6}
-.back{background:none;border:0;color:var(--accent);font:inherit;padding:4px 0;margin:0 0 10px}
-.cmp h3{font-size:12px;margin:16px 0 4px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-.cmp p{margin:0}
-.cmp ul{margin:0;padding-left:18px}
-.cmp li{margin:4px 0}
-.note{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:14px;margin-top:12px}
-.empty{color:var(--muted);text-align:center;padding:40px 10px}
-.ok{color:var(--ok)}.bad{color:var(--bad)}
-.card.tap{cursor:pointer}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 var(--sans);padding-bottom:env(safe-area-inset-bottom)}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit}
+.wrap{max-width:640px;margin:0 auto;padding:0 20px}
+
+header{position:sticky;top:0;z-index:5;background:var(--paper);padding-top:calc(env(safe-area-inset-top) + 14px)}
+.dateline{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{margin:6px 0 0;font:600 40px/1 var(--serif);letter-spacing:-.02em}
+nav{display:flex;gap:22px;border-top:2px solid var(--rule-strong);border-bottom:1px solid var(--rule);margin-top:10px}
+nav button{background:none;border:0;padding:12px 0 10px;min-height:44px;font-size:14px;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer}
+nav button[aria-current="page"]{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
+
+.kicker{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.meta{font-size:12px;color:var(--muted)}
+.lead{padding:22px 0 20px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:12px}
+.lead h2{margin:0;font:600 29px/1.12 var(--serif);letter-spacing:-.01em}
+.dots{display:flex;gap:5px;flex-wrap:wrap}
+.dots i{width:9px;height:9px;border-radius:50%;background:var(--ink)}
+.dots i.off{background:none;border:1px solid var(--dot-off)}
+.kern{margin:0;font:italic 400 17px/1.45 var(--serif);color:var(--ink-2)}
+.views{display:flex;flex-direction:column;gap:8px;padding-top:4px}
+.view{display:flex;gap:12px;align-items:baseline;font-size:14px;line-height:1.4}
+.view b{flex:0 0 88px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.cta{margin-top:6px;display:flex;align-items:center;justify-content:space-between;min-height:44px;padding:0 16px;border:1px solid var(--rule-strong);font-size:14px;font-weight:600;background:none;width:100%;cursor:pointer;text-align:left}
+
+.list a,.list button.row{display:flex;flex-direction:column;gap:6px;padding:16px 0;border-bottom:1px solid var(--rule);width:100%;background:none;border-left:0;border-right:0;border-top:0;text-align:left;cursor:pointer}
+.row-title{font:600 19px/1.25 var(--serif)}
+.section{margin:26px 0 0;padding-bottom:6px;border-bottom:2px solid var(--rule-strong);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+
+.back{background:none;border:0;padding:14px 0 4px;min-height:44px;color:var(--accent);font-size:14px;font-weight:600;cursor:pointer}
+.detail{padding:8px 0 20px;display:flex;flex-direction:column;gap:12px}
+.detail h2{margin:0;font:600 30px/1.12 var(--serif);letter-spacing:-.01em}
+.block h3{margin:22px 0 8px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.block p{margin:0;font:400 17px/1.5 var(--serif)}
+.block ul{margin:0;padding-left:18px;font:400 17px/1.5 var(--serif)}
+.block li{margin:4px 0}
+.persp{display:flex;flex-direction:column}
+.persp div{display:flex;flex-direction:column;gap:2px;padding:10px 0;border-top:1px solid var(--rule)}
+.persp div:first-child{border-top:0}
+.persp b{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.persp span{font:400 16px/1.45 var(--serif)}
+.note{background:var(--note);padding:12px 14px;font-size:14px;color:var(--ink-2)}
+.art{display:flex;flex-direction:column;gap:4px;padding:14px 0;border-bottom:1px solid var(--rule)}
+.art .src{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.art .src span{font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted)}
+.art .t{font:600 18px/1.3 var(--serif)}
+.art p{margin:0;font-size:14px;color:var(--muted)}
+.missing{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
+.missing span{text-decoration:line-through;text-decoration-color:var(--dot-off)}
+.fine,.block p.fine{font:400 12px/1.5 var(--sans);color:var(--muted);margin-top:14px}
+
+.status{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--rule);font-size:15px}
+.status .ok{color:var(--muted)} .status .bad{color:var(--accent);font-weight:600}
+.status small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.empty{padding:48px 0;text-align:center;color:var(--muted);font:italic 17px/1.5 var(--serif)}
+main{padding-bottom:48px}
 </style>
 </head>
 <body>
 <header>
-  <h1>Nachrichtenlage</h1>
-  <nav>
-    <button data-view="topics" class="on">Themen</button>
-    <button data-view="latest">Neueste</button>
-    <button data-view="status">Quellen</button>
-  </nav>
+  <div class="wrap">
+    <div class="dateline"><span id="today"></span><span id="stand"></span></div>
+    <h1>Die Lage</h1>
+    <nav aria-label="Bereiche">
+      <button type="button" data-view="topics" aria-current="page">Themen</button>
+      <button type="button" data-view="latest">Neueste</button>
+      <button type="button" data-view="status">Quellen</button>
+    </nav>
+  </div>
 </header>
-<main id="main"><div class="empty">Lade …</div></main>
+<main class="wrap" id="main"><p class="empty">Lade die Lage …</p></main>
+
 <script>
 const main = document.getElementById('main');
-let SOURCES = {}, TOPICS = [], view = 'topics';
+let SOURCES = {}, TOPICS = [], view = 'topics', inDetail = false;
 const bust = () => '?t=' + Math.floor(Date.now() / 60000);
-
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ago = iso => {
   const m = Math.round((Date.now() - new Date(iso)) / 60000);
@@ -69,123 +109,134 @@ const ago = iso => {
   const h = Math.round(m / 60);
   return h < 24 ? `vor ${h} Std.` : `vor ${Math.round(h / 24)} Tg.`;
 };
-const short = s => SOURCES[s]?.short || s;
+const clock = iso => new Date(iso).toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
+const total = () => Object.keys(SOURCES).length || 20;
 const langs = t => {
   const l = [...new Set(t.sources.map(s => SOURCES[s]?.lang).filter(Boolean))];
-  return l.length > 1 ? ' · ' + l.map(x => x.toUpperCase()).join(' + ') : '';
+  return l.length > 1 ? 'Deutsch und Englisch' : (l[0] === 'en' ? 'Englisch' : '');
 };
+const metaLine = t => [`${t.source_count} Quellen`, langs(t), ago(t.latest)].filter(Boolean).join(' · ');
+const dots = t => `<div class="dots" role="img" aria-label="${t.source_count} von ${total()} Quellen berichten">${
+  Array.from({length: total()}, (_, i) => `<i class="${i < t.source_count ? '' : 'off'}"></i>`).join('')}</div>`;
 
-document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
-  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
+document.getElementById('today').textContent =
+  new Date().toLocaleDateString('de-DE', {weekday: 'long', day: 'numeric', month: 'long'});
+
+document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('nav button').forEach(x => x === b ? x.setAttribute('aria-current', 'page') : x.removeAttribute('aria-current'));
   view = b.dataset.view;
   render();
-});
+}));
 
-async function getJSON(url) {
-  const r = await fetch(url + bust());
+async function getJSON(name) {
+  const r = await fetch(name + bust());
+  if (!r.ok) throw new Error(r.status);
   return r.json();
 }
 
 async function render() {
+  inDetail = false;
   window.scrollTo(0, 0);
   try {
     if (view === 'topics') await renderTopics();
     else if (view === 'latest') await renderLatest();
     else await renderStatus();
   } catch (e) {
-    main.innerHTML = '<div class="note">Daten noch nicht verfügbar. Der erste Lauf des GitHub-Jobs dauert ein paar Minuten.</div>';
+    main.innerHTML = '<p class="empty">Noch keine Ausgabe da. Der erste Lauf bei GitHub dauert ein paar Minuten.</p>';
   }
 }
 
 async function renderTopics() {
   const d = await getJSON('topics.json');
-  SOURCES = d.sources;
-  TOPICS = d.topics;
-  const stand = `<div class="meta" style="margin:0 0 10px">Stand: ${ago(d.stand)}</div>`;
-  const total = Object.keys(SOURCES).length;
-  if (!TOPICS.length) {
-    main.innerHTML = '<div class="empty">Noch keine Themen mit mehreren Quellen.</div>';
-    return;
-  }
-  main.innerHTML = stand + TOPICS.map((t, i) => `
-    <div class="card tap" onclick="openTopic(${i})">
-      <h2>${esc(t.title)}</h2>
-      <div class="bar"><i style="width:${Math.round(t.source_count / total * 100)}%"></i></div>
-      <div class="meta">${t.source_count} von ${total} Quellen · ${t.articles.length} Meldungen · ${ago(t.latest)}${langs(t)}</div>
-      <div class="chips">${t.sources.map(s => `<span class="chip">${esc(short(s))}</span>`).join('')}</div>
-    </div>`).join('');
+  SOURCES = d.sources; TOPICS = d.topics;
+  document.getElementById('stand').textContent = 'Stand ' + clock(d.stand);
+  if (!TOPICS.length) { main.innerHTML = '<p class="empty">Gerade berichten keine zwei Quellen über dasselbe Thema.</p>'; return; }
+  const [lead, ...rest] = TOPICS;
+  const v = lead.vergleich;
+  const teaser = v?.kern || lead.articles[0]?.summary || '';
+  main.innerHTML = `
+    <article class="lead">
+      <div class="kicker">Thema des Tages · ${lead.source_count} von ${total()} Quellen</div>
+      <h2>${esc(lead.title)}</h2>
+      ${dots(lead)}
+      ${teaser ? `<p class="kern">${esc(teaser)}</p>` : ''}
+      ${v?.perspektiven?.length ? `<div class="views">${v.perspektiven.slice(0, 3).map(p =>
+        `<div class="view"><b>${esc(p.quelle)}</b><span>${esc(p.schwerpunkt)}</span></div>`).join('')}</div>` : ''}
+      <button type="button" class="cta" onclick="openTopic(0)">Alle ${lead.articles.length} Berichte vergleichen <span aria-hidden="true">→</span></button>
+    </article>
+    ${rest.length ? `<div class="section">Weitere Themen</div>
+    <div class="list">${rest.map((t, i) => `
+      <button type="button" class="row" onclick="openTopic(${i + 1})">
+        <span class="row-title">${esc(t.title)}</span>
+        <span class="meta">${metaLine(t)}</span>
+      </button>`).join('')}</div>` : ''}`;
 }
 
 function openTopic(i) {
-  const t = TOPICS[i];
+  inDetail = true;
+  const t = TOPICS[i], v = t.vergleich;
   const missing = Object.keys(SOURCES).filter(s => !t.sources.includes(s));
   main.innerHTML = `
-    <button class="back" onclick="render()">‹ Alle Themen</button>
-    <div class="card">
+    <button type="button" class="back" onclick="render()">‹ Alle Themen</button>
+    <article class="detail">
+      <div class="kicker">${t.source_count} von ${total()} Quellen${langs(t) ? ' · ' + langs(t) : ''}</div>
       <h2>${esc(t.title)}</h2>
-      <div class="meta">${t.source_count} Quellen · ${t.articles.length} Meldungen</div>
-      <div class="cmp">${renderCompare(t)}</div>
-    </div>
-    <div class="card">
-      ${t.articles.map(a => `
-        <div class="art">
-          <div class="src">${esc(a.source)} <span>· ${ago(a.published)}</span></div>
-          <a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.title)}</a>
-          ${a.summary ? `<p>${esc(a.summary.slice(0, 220))}${a.summary.length > 220 ? ' …' : ''}</p>` : ''}
-        </div>`).join('')}
-    </div>
-    ${missing.length ? `<div class="card"><div class="meta">Nicht (oder nicht erkannt) berichtet von:</div>
-      <div class="chips">${missing.map(s => `<span class="chip off">${esc(s)}</span>`).join('')}</div></div>` : ''}`;
+      ${dots(t)}
+      <div class="block">${v ? `
+        <h3>Gemeinsamer Kern</h3><p>${esc(v.kern)}</p>
+        ${v.perspektiven?.length ? `<h3>Schwerpunkte</h3><div class="persp">${v.perspektiven.map(p =>
+          `<div><b>${esc(p.quelle)}</b><span>${esc(p.schwerpunkt)}</span></div>`).join('')}</div>` : ''}
+        ${v.unterschiede?.length ? `<h3>Unterschiede</h3><ul>${v.unterschiede.map(u => `<li>${esc(u)}</li>`).join('')}</ul>` : ''}
+        ${v.offen ? `<h3>Offen</h3><p>${esc(v.offen)}</p>` : ''}
+        <p class="fine">Vergleich von Claude, nur auf Grundlage von Überschriften und Teasern.</p>`
+      : `<div class="note" style="margin-top:8px">${t.source_count < 3
+          ? 'Ein Perspektivvergleich entsteht, sobald mindestens drei Quellen berichten.'
+          : 'Der Perspektivvergleich wird beim nächsten Lauf erstellt.'}</div>`}
+      </div>
+      <div class="section">Die Berichte</div>
+      <div>${t.articles.map(a => `
+        <a class="art" href="${esc(a.link)}" target="_blank" rel="noopener">
+          <span class="src">${esc(a.source)} <span>· ${ago(a.published)}</span></span>
+          <span class="t">${esc(a.title)}</span>
+          ${a.summary ? `<p>${esc(a.summary)}</p>` : ''}
+        </a>`).join('')}</div>
+      ${missing.length ? `<div class="section">Nicht berichtet von</div>
+        <div class="missing" style="padding-top:12px">${missing.map(s => `<span>${esc(s)}</span>`).join('')}</div>
+        <p class="fine">Oder dort unter anderem Blickwinkel, der nicht als dasselbe Thema erkannt wurde.</p>` : ''}
+    </article>`;
   window.scrollTo(0, 0);
-}
-
-function renderCompare(t) {
-  const d = t.vergleich;
-  if (!d) {
-    return `<div class="note">${t.source_count < 3
-      ? 'Ein Perspektivvergleich entsteht, sobald mindestens drei Quellen berichten.'
-      : 'Der Vergleich wird beim nächsten Lauf erstellt.'}</div>`;
-  }
-  return `
-    <h3>Gemeinsamer Kern</h3><p>${esc(d.kern)}</p>
-    ${(d.perspektiven || []).length ? `<h3>Schwerpunkte</h3><ul>${d.perspektiven.map(p => `<li><b>${esc(p.quelle)}:</b> ${esc(p.schwerpunkt)}</li>`).join('')}</ul>` : ''}
-    ${(d.unterschiede || []).length ? `<h3>Unterschiede</h3><ul>${d.unterschiede.map(u => `<li>${esc(u)}</li>`).join('')}</ul>` : ''}
-    ${d.offen ? `<h3>Offen</h3><p>${esc(d.offen)}</p>` : ''}
-    <p class="meta" style="margin-top:12px">Von Claude, basiert nur auf Überschriften und Teasern.</p>`;
 }
 
 async function renderLatest() {
   const d = await getJSON('latest.json');
-  SOURCES = d.sources;
-  if (!d.articles.length) { main.innerHTML = '<div class="empty">Noch keine Meldungen.</div>'; return; }
-  main.innerHTML = '<div class="card">' + d.articles.map(a => `
-    <div class="art">
-      <div class="src">${esc(a.source)} <span>· ${ago(a.published)}</span></div>
-      <a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.title)}</a>
-    </div>`).join('') + '</div>';
+  if (!d.articles.length) { main.innerHTML = '<p class="empty">Noch keine Meldungen.</p>'; return; }
+  main.innerHTML = '<div style="padding-top:6px">' + d.articles.map(a => `
+    <a class="art" href="${esc(a.link)}" target="_blank" rel="noopener">
+      <span class="src">${esc(a.source)} <span>· ${ago(a.published)}</span></span>
+      <span class="t">${esc(a.title)}</span>
+    </a>`).join('') + '</div>';
 }
 
 async function renderStatus() {
   const d = await getJSON('status.json');
   const a = d.abgleich || {};
-  main.innerHTML = `<div class="card">
-      <b>Themen-Abgleich</b>
-      <span class="${a.aktiv ? 'ok' : 'meta'}">· ${a.aktiv ? 'nach Bedeutung, sprachübergreifend' : 'nach Wörtern'}</span>
-      ${a.aktiv ? '' : `<p class="meta" style="margin:4px 0 0">Das Sprachmodell konnte im GitHub-Job nicht geladen werden.${a.fehler ? ' (' + esc(a.fehler) + ')' : ''}</p>`}
-      <div style="margin-top:8px"><b>Perspektivvergleich</b>
-      <span class="${d.vergleich ? 'ok' : 'meta'}">· ${d.vergleich ? 'aktiv' : 'aus (kein HENDRIK_API_KEY als Secret)'}</span></div>
-      <div class="meta" style="margin-top:8px">Letzter Lauf: ${ago(d.stand)}</div>
-    </div>
-    <div class="card">` + Object.entries(d.feeds).map(([name, s]) => `
-    <div class="art">
-      <b>${esc(name)}</b>
-      <span class="${s.ok ? 'ok' : s.ok === false ? 'bad' : 'meta'}">
-        ${s.ok ? `· ${s.count} Meldungen, ${s.neu} neu` : s.ok === false ? '· Fehler' : '· noch nicht abgerufen'}</span>
-      ${s.error ? `<p>${esc(s.error)}</p>` : ''}
-    </div>`).join('') + '</div>';
+  const feeds = Object.entries(d.feeds);
+  const ok = feeds.filter(([, s]) => s.ok).length;
+  main.innerHTML = `
+    <div class="section">Ausgabe</div>
+    <div class="status"><span>Letzter Lauf</span><span class="ok">${ago(d.stand)}</span></div>
+    <div class="status"><span>Themen-Abgleich</span><span class="${a.aktiv ? 'ok' : 'bad'}">${a.aktiv ? 'nach Bedeutung' : 'nur nach Wörtern'}</span></div>
+    <div class="status"><span>Perspektivvergleich</span><span class="${d.vergleich ? 'ok' : 'bad'}">${d.vergleich ? 'aktiv' : 'kein Schlüssel'}</span></div>
+    <div class="section">Quellen · ${ok} von ${feeds.length} erreichbar</div>
+    ${feeds.map(([name, s]) => `
+      <div class="status">
+        <span>${esc(name)}${s.error ? `<small>${esc(s.error)}</small>` : ''}</span>
+        <span class="${s.ok ? 'ok' : 'bad'}">${s.ok ? `${s.count} Meldungen` : 'Fehler'}</span>
+      </div>`).join('')}`;
 }
 
 render();
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !inDetail) render(); });
 </script>
 </body>
 </html>
