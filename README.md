@@ -51,6 +51,27 @@ Am bequemsten am Computer, geht aber auch im Browser auf dem iPhone.
 - **Status:** Der Tab „Quellen“ in der App zeigt, welche Feeds funktionieren, ob der
   Abgleich nach Bedeutung aktiv ist und wann der letzte Lauf war.
 
+## Live-Suche einrichten (optional, ca. 10 Minuten)
+
+Die Suche durchsucht zuerst das Archiv der App (7 Tage). Für eine echte Live-Suche, die bei
+jeder Anfrage die neuesten Artikel aller Medien abruft, braucht es einen kleinen Vermittler,
+weil Browser solche Anfragen von einer Webseite aus blockieren. Dafür reicht ein kostenloser
+Cloudflare Worker (bis 100.000 Anfragen pro Tag gratis):
+
+1. Auf [dash.cloudflare.com](https://dash.cloudflare.com) ein kostenloses Konto anlegen.
+2. Links **„Workers & Pages“** → **„Create“** → **„Create Worker“**, Name z. B. `lage-suche`,
+   dann **„Deploy“**.
+3. **„Edit code“** öffnen, den gesamten Inhalt durch `worker/live-search.js` aus diesem
+   Repository ersetzen und **„Deploy“** klicken.
+4. Im Worker unter **„Settings“ → „Variables and Secrets“** → **„Add“**: Typ **Secret**,
+   Name `ANTHROPIC_API_KEY`, Wert dein Claude-Key. (Ohne Key gibt es Treffer, aber keine
+   Zusammenfassung und keine Übersetzung für die englischen Medien.)
+5. Die Adresse des Workers (z. B. `https://lage-suche.<name>.workers.dev`) oben in
+   `site/index.html` bei `const LIVE_URL = '';` eintragen.
+
+Der Worker beantwortet nur Anfragen von deiner Seite, speichert jede Suche 10 Minuten
+zwischen und nutzt pro Suche zwei kurze Haiku-Aufrufe.
+
 ## Anpassen
 
 - **Quellen:** `feeds.py` bearbeiten (geht direkt auf github.com über den Stift).
@@ -70,6 +91,7 @@ Am bequemsten am Computer, geht aber auch im Browser auf dem iPhone.
 | `cluster.py` | Themen-Gruppierung (Rückfall: Wortabgleich) |
 | `compare.py` | Perspektivvergleich mit Claude |
 | `site/` | Die Webseite fürs iPhone |
+| `worker/live-search.js` | Live-Suche (Cloudflare Worker, optional) |
 | `.github/workflows/update.yml` | Der automatische Job |
 
 Lokal testen: `pip install -r requirements.txt && python build.py`, dann `_site/` mit

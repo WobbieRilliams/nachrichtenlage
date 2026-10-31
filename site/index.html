@@ -119,6 +119,20 @@ main{padding-bottom:56px}
 .seg{display:flex;border:1px solid var(--ink);margin:14px 0 0}
 .seg button{flex:1;min-height:38px;font-size:13px;font-weight:600;text-align:center}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.live{margin:18px 0 6px;padding:14px 0 4px;border-top:3px solid var(--ink)}
+.livehead{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.livehead h2{margin:0;font:700 18px/1.2 var(--serif)}
+.livehead h2 i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#C0392B;margin-right:7px;vertical-align:2px}
+.livehead span{font-size:11px;color:var(--muted);text-align:right}
+.livesum{margin:10px 0 4px;padding:12px 14px;background:var(--chip)}
+.livesum p{margin:0;font:400 16px/1.5 var(--serif)}
+.livesum ul{margin:8px 0 0;padding-left:18px;font:400 14px/1.45 var(--serif);color:var(--ink-2)}
+.livesum small{display:block;margin-top:8px;font-size:11px;color:var(--muted)}
+.livelink .arrow{flex:0 0 auto;align-self:center;color:var(--muted)}
+.skeleton{height:14px;background:var(--rule);margin:14px 0;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.4}}
+@media (prefers-reduced-motion:reduce){.skeleton{animation:none}}
+.archhead{margin-top:26px}
 .time{flex:0 0 44px;font-size:12px;font-weight:600;color:var(--muted);padding-top:3px}
 
 .row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--rule);font-size:14px}
@@ -183,6 +197,8 @@ function applyFilter(raw) {
   }).filter(t => t.source_count >= 2)
     .sort((a, b) => b.source_count - a.source_count || (b.latest > a.latest ? 1 : -1));
 }
+// Adresse der Live-Suche (Cloudflare Worker). Leer = Live-Suche ausgeblendet.
+const LIVE_URL = '';
 const bust = () => '?t=' + Math.floor(Date.now() / 60000);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ago = iso => {
@@ -451,10 +467,13 @@ async function doSearch(q) {
   lastQuery = q;
   history_ = [q, ...history_.filter(h => h.toLowerCase() !== q.toLowerCase())].slice(0, 8);
   try { localStorage.setItem('nl_hist', JSON.stringify(history_)); } catch (e) {}
-  box.innerHTML = '<p class="empty">Suche läuft …</p>';
-  try { await loadSearch(); } catch (e) { box.innerHTML = '<p class="empty">Der Suchindex ist noch nicht da. Er entsteht beim nächsten Lauf.</p>'; return; }
+  box.innerHTML = `<div id="live"></div><div id="archive"><p class="empty">Suche läuft …</p></div>`;
+  startLive(q);
+  const arch = document.getElementById('archive');
+  const archHead = LIVE_URL ? `<div class="sec archhead"><h2>Im Archiv der App</h2><span>letzte 7 Tage</span></div>` : '';
+  try { await loadSearch(); } catch (e) { arch.innerHTML = archHead + '<p class="empty">Der Suchindex ist noch nicht da. Er entsteht beim nächsten Lauf.</p>'; return; }
   const res = runSearch(q);
-  if (!res || !res.length) { box.innerHTML = `<p class="empty">Keine Meldungen zu „${esc(q)}“ in den letzten 7 Tagen.</p>`; return; }
+  if (!res || !res.length) { arch.innerHTML = archHead + `<p class="empty">Keine Meldungen zu „${esc(q)}“ im Archiv der letzten 7 Tage.</p>`; return; }
 
   const bySrc = {};
   res.forEach(a => (bySrc[a.source] ||= []).push(a));
@@ -483,7 +502,7 @@ async function doSearch(q) {
   }).join('');
   const chrono = res.map(a => item(a, false)).join('');
 
-  box.innerHTML = `
+  arch.innerHTML = archHead + `
     <div class="summarybox">
       <p class="big">${res.length} Meldungen in ${order.length} von ${active().length} Quellen</p>
       <div class="meta">${direct} direkte Treffer${res.length > direct ? `, ${res.length - direct} inhaltlich ähnliche (auch andere Sprachen)` : ''} · ${days === 1 ? 'seit gestern' : `über ${days} Tage`}</div>
@@ -502,6 +521,44 @@ async function doSearch(q) {
     box.querySelectorAll('[data-mode]').forEach(x => x.setAttribute('aria-pressed', x === b));
     document.getElementById('list').innerHTML = searchMode === 'medium' ? byMedium : `<div style="margin-top:8px">${chrono}</div>`;
   }));
+}
+
+async function startLive(q) {
+  const el = document.getElementById('live');
+  if (!LIVE_URL || !el) return;
+  const srcs = active();
+  const head = (right) => `<div class="livehead"><h2><i aria-hidden="true"></i>Live aus dem Netz</h2><span>${right}</span></div>`;
+  el.className = 'live';
+  el.innerHTML = head(`sucht bei ${srcs.length} Medien …`) +
+    '<div class="skeleton" style="width:90%"></div><div class="skeleton" style="width:70%"></div><div class="skeleton" style="width:80%"></div>';
+  let d;
+  try {
+    const r = await fetch(LIVE_URL + '?' + new URLSearchParams({q, sources: srcs.join(','), sum: '1'}));
+    d = await r.json();
+    if (!r.ok) throw new Error(d.error || r.status);
+  } catch (e) {
+    if (lastQuery === q) el.innerHTML = head('') + '<p class="hint">Die Live-Suche ist gerade nicht erreichbar. Unten findest du die Treffer aus dem Archiv.</p>';
+    return;
+  }
+  if (lastQuery !== q || !document.getElementById('live')) return;   // inzwischen neue Suche
+  if (!d.items.length) { el.innerHTML = head(`Stand ${clock(d.at)}`) + `<p class="hint">Keines deiner Medien hat in den letzten 7 Tagen etwas zu „${esc(q)}“ veröffentlicht.</p>`; return; }
+  const s = d.summary;
+  el.innerHTML = head(`die ${d.items.length} neuesten · Stand ${clock(d.at)}`) + `
+    <div class="cover"><div class="bar"><i style="width:${Math.round(d.found_in.length / srcs.length * 100)}%"></i></div>
+      <span>gefunden bei ${d.found_in.length} von ${srcs.length} Medien</span></div>
+    ${s?.lage ? `<div class="livesum"><p>${esc(s.lage)}</p>
+      ${s.schwerpunkte?.length ? `<ul>${s.schwerpunkte.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+      <small>Zusammenfassung von Claude, nur auf Grundlage der Überschriften.</small></div>` : ''}
+    ${d.items.map(a => `
+      <a class="story livelink" href="${esc(a.link)}" target="_blank" rel="noopener">
+        <div class="body">
+          <div class="label" style="margin-bottom:4px">${esc(a.source)} <span style="font-weight:500;letter-spacing:0;text-transform:none;color:var(--muted)">· ${ago(a.published)}</span></div>
+          <h3 style="font-size:17px">${esc(a.title)}</h3>
+        </div>
+        ${img(a.image, 'thumb')}
+        <span class="arrow" aria-hidden="true">↗</span>
+      </a>`).join('')}
+    <p class="hint">${d.query_en ? `Englische Medien gesucht mit „${esc(d.query_en)}“. ` : ''}${d.engine === 'google' ? 'Gefunden über Google News, die Links führen zum jeweiligen Medium.' : 'Gefunden über GDELT.'}</p>`;
 }
 
 render();

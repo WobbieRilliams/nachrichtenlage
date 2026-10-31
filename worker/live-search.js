@@ -1,0 +1,244 @@
+/**
+ * Nachrichtenlage – Live-Suche (Cloudflare Worker)
+ *
+ * Fragt bei jeder Suche alle Medien parallel ab, nimmt die neuesten Artikel quer über
+ * die Medien (höchstens 2 pro Medium) und lässt Claude optional kurz zusammenfassen.
+ *
+ * Quelle der Treffer: Google-News-Suche je Medium (site:…), bei Problemen GDELT.
+ * Einstellungen (Cloudflare → Worker → Settings → Variables and Secrets):
+ *   ANTHROPIC_API_KEY  (Secret, optional)  – für Übersetzung und Zusammenfassung
+ *   ALLOWED_ORIGIN     (Text, optional)    – Standard: https://wobbierilliams.github.io
+ */
+
+const OUTLETS = [
+  ["Tagesschau", "tagesschau.de", "de"],
+  ["ZDFheute", "zdf.de", "de"],
+  ["Deutschlandfunk", "deutschlandfunk.de", "de"],
+  ["Deutsche Welle", "dw.com", "de"],
+  ["WDR", "wdr.de", "de"],
+  ["FAZ", "faz.net", "de"],
+  ["Süddeutsche", "sueddeutsche.de", "de"],
+  ["Welt", "welt.de", "de"],
+  ["taz", "taz.de", "de"],
+  ["Bild", "bild.de", "de"],
+  ["Spiegel", "spiegel.de", "de"],
+  ["Zeit", "zeit.de", "de"],
+  ["Handelsblatt", "handelsblatt.com", "de"],
+  ["Wirtschaftswoche", "wiwo.de", "de"],
+  ["NZZ", "nzz.ch", "de"],
+  ["Der Standard", "derstandard.at", "de"],
+  ["BBC", "bbc.co.uk", "en"],
+  ["The Guardian", "theguardian.com", "en"],
+  ["Al Jazeera", "aljazeera.com", "en"],
+  ["New York Times", "nytimes.com", "en"],
+];
+
+const RESULTS = 10;       // so viele Artikel liefert die Live-Suche
+const PER_OUTLET = 2;     // höchstens so viele pro Medium
+const CACHE_SECONDS = 600; // gleiche Suche 10 Minuten lang aus dem Zwischenspeicher
+const MODEL = "claude-haiku-5-5";
+
+export default {
+  async fetch(request, env, ctx) {
+    const allowed = env.ALLOWED_ORIGIN || "https://wobbierilliams.github.io";
+    const cors = {
+      "Access-Control-Allow-Origin": allowed,
+      "Access-Control-Allow-Methods": "GET, OPTIONS",
+      "Vary": "Origin",
+    };
+    if (request.method === "OPTIONS") return new Response(null, { headers: cors });
+
+    // Nur die eigene Seite darf die Suche nutzen (schützt dein Claude-Guthaben)
+    const origin = request.headers.get("Origin");
+    if (origin !== allowed) return json({ error: "Nicht erlaubt" }, 403, cors);
+
+    const url = new URL(request.url);
+    const q = (url.searchParams.get("q") || "").trim().slice(0, 100);
+    if (!q) return json({ error: "Suchbegriff fehlt" }, 400, cors);
+    const wanted = (url.searchParams.get("sources") || "").split(",").filter(Boolean);
+    const outlets = wanted.length ? OUTLETS.filter(o => wanted.includes(o[0])) : OUTLETS;
+    const withSummary = url.searchParams.get("sum") === "1" && !!env.ANTHROPIC_API_KEY;
+
+    const cacheKey = new Request(
+      "https://cache.nachrichtenlage/?" +
+        new URLSearchParams({ q: q.toLowerCase(), s: outlets.map(o => o[0]).join(","), sum: withSummary ? "1" : "0" })
+    );
+    const cached = await caches.default.match(cacheKey);
+    if (cached) return withHeaders(cached, cors);
+
+    try {
+      const result = await search(q, outlets, env, withSummary);
+      const response = json(result, 200, { ...cors, "Cache-Control": `public, max-age=${CACHE_SECONDS}` });
+      ctx.waitUntil(caches.default.put(cacheKey, response.clone()));
+      return response;
+    } catch (err) {
+      return json({ error: "Suche fehlgeschlagen", detail: String(err).slice(0, 200) }, 502, cors);
+    }
+  },
+};
+
+async function search(q, outlets, env, withSummary) {
+  const needsEnglish = outlets.some(o => o[2] === "en");
+  const qEn = needsEnglish && env.ANTHROPIC_API_KEY ? await translate(q, env).catch(() => q) : q;
+
+  let items = [];
+  let engine = "google";
+  const perOutlet = await Promise.all(
+    outlets.map(o => googleNews(o[2] === "en" ? qEn : q, o).catch(() => []))
+  );
+  items = perOutlet.flat();
+
+  if (!items.length) {
+    engine = "gdelt";
+    items = await gdelt(q, qEn, outlets).catch(() => []);
+  }
+
+  const picked = pickLatest(items);
+  const out = {
+    query: q,
+    query_en: qEn !== q ? qEn : null,
+    engine,
+    at: new Date().toISOString(),
+    outlets: outlets.length,
+    found_in: [...new Set(items.map(i => i.source))],
+    items: picked,
+  };
+  if (withSummary && picked.length >= 2) out.summary = await summarize(q, picked, env).catch(() => null);
+  return out;
+}
+
+// ---------- Google News (je Medium) ----------
+async function googleNews(q, [name, domain, lang]) {
+  const loc = lang === "en" ? { hl: "en-GB", gl: "GB", ceid: "GB:en" } : { hl: "de", gl: "DE", ceid: "DE:de" };
+  const params = new URLSearchParams({ q: `${q} site:${domain} when:7d`, ...loc });
+  const res = await fetch(`https://news.google.com/rss/search?${params}`, {
+    headers: { "User-Agent": "Mozilla/5.0 (Nachrichtenlage Live-Suche)" },
+    cf: { cacheTtl: 300 },
+  });
+  if (!res.ok) throw new Error(`google ${res.status}`);
+  return parseRss(await res.text())
+    .map(i => ({ ...i, source: name, lang, title: stripSource(i.title) }))
+    .slice(0, 5);
+}
+
+function parseRss(xml) {
+  const items = [];
+  for (const m of xml.matchAll(/<item>([\s\S]*?)<\/item>/g)) {
+    const tag = t => {
+      const r = m[1].match(new RegExp(`<${t}[^>]*>([\\s\\S]*?)<\\/${t}>`));
+      return r ? decode(r[1].replace(/^<!\[CDATA\[|\]\]>$/g, "")).trim() : "";
+    };
+    const title = tag("title"), link = tag("link"), pub = tag("pubDate");
+    if (!title || !link) continue;
+    const d = new Date(pub);
+    items.push({ title, link, published: isNaN(d) ? null : d.toISOString() });
+  }
+  return items;
+}
+
+function stripSource(title) {
+  // Google hängt " - Medienname" an
+  return title.replace(/\s[-–]\s[^-–]{2,40}$/, "").trim();
+}
+
+function decode(s) {
+  return s
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n)).replace(/&amp;/g, "&");
+}
+
+// ---------- GDELT (Rückfall) ----------
+async function gdelt(q, qEn, outlets) {
+  const domains = outlets.map(o => `domainis:${o[1]}`).join(" OR ");
+  const terms = qEn && qEn !== q ? `(${quote(q)} OR ${quote(qEn)})` : quote(q);
+  const params = new URLSearchParams({
+    query: `${terms} (${domains})`, mode: "artlist", maxrecords: "75",
+    sort: "datedesc", timespan: "7d", format: "json",
+  });
+  const res = await fetch(`https://api.gdeltproject.org/api/v2/doc/doc?${params}`);
+  if (!res.ok) throw new Error(`gdelt ${res.status}`);
+  const data = await res.json();
+  return (data.articles || []).map(a => {
+    const o = outlets.find(x => a.domain && a.domain.endsWith(x[1]));
+    const s = a.seendate || "";
+    const iso = s.length >= 15 ? `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}T${s.slice(9, 11)}:${s.slice(11, 13)}:${s.slice(13, 15)}Z` : null;
+    return o && { title: a.title, link: a.url, published: iso, source: o[0], lang: o[2], image: a.socialimage || "" };
+  }).filter(Boolean);
+}
+
+function quote(s) {
+  return /\s/.test(s) ? `"${s.replace(/"/g, "")}"` : s;
+}
+
+// ---------- Auswahl: neueste, aber quer über die Medien ----------
+function pickLatest(items) {
+  const seen = new Set();
+  const sorted = items
+    .filter(i => i.published)
+    .sort((a, b) => (a.published < b.published ? 1 : -1))
+    .filter(i => {
+      // Doppelte nur innerhalb eines Mediums entfernen – gleiche Agenturmeldung bei zwei Medien bleibt drin
+      const key = i.source + "|" + i.title.toLowerCase().replace(/[^a-z0-9äöüß]+/g, " ").trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  const count = {};
+  const out = [];
+  for (const i of sorted) {
+    if ((count[i.source] || 0) >= PER_OUTLET) continue;
+    count[i.source] = (count[i.source] || 0) + 1;
+    out.push(i);
+    if (out.length >= RESULTS) break;
+  }
+  return out;
+}
+
+// ---------- Claude ----------
+async function claude(env, prompt, maxTokens) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ model: env.NL_MODEL || MODEL, max_tokens: maxTokens, messages: [{ role: "user", content: prompt }] }),
+  });
+  if (!res.ok) throw new Error(`claude ${res.status}`);
+  const data = await res.json();
+  return data.content.filter(b => b.type === "text").map(b => b.text).join("").trim();
+}
+
+async function translate(q, env) {
+  const text = await claude(env,
+    `Übersetze diesen Nachrichten-Suchbegriff ins Englische, so wie englischsprachige Medien ihn nennen würden. ` +
+    `Eigennamen bleiben. Antworte nur mit dem Suchbegriff, ohne Anführungszeichen.\n\n${q}`, 40);
+  return text.split("\n")[0].replace(/["„“]/g, "").trim().slice(0, 100) || q;
+}
+
+async function summarize(q, items, env) {
+  const list = items.map(i => `- [${i.source}, ${i.published?.slice(0, 16).replace("T", " ")}] ${i.title}`).join("\n");
+  const text = await claude(env,
+    `Suchbegriff: ${q}\n\nDie neuesten Überschriften verschiedener Medien:\n${list}\n\n` +
+    `Fasse auf Deutsch nüchtern zusammen, was diese Überschriften zum Suchbegriff zeigen. ` +
+    `Nutze nur die Überschriften, ergänze kein eigenes Wissen, bewerte keine Medien. ` +
+    `Antworte nur mit JSON: {"lage":"Neuester Stand in 2-3 Sätzen","schwerpunkte":["Wer betont was, je 1 kurzer Satz, höchstens 4"]}`, 600);
+  const s = text.indexOf("{"), e = text.lastIndexOf("}");
+  return JSON.parse(text.slice(s, e + 1));
+}
+
+// ---------- Hilfen ----------
+function json(obj, status, headers) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { "Content-Type": "application/json; charset=utf-8", ...headers },
+  });
+}
+
+function withHeaders(response, headers) {
+  const r = new Response(response.body, response);
+  for (const [k, v] of Object.entries(headers)) r.headers.set(k, v);
+  return r;
+}
+
