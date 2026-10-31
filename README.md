@@ -45,6 +45,9 @@ Am bequemsten am Computer, geht aber auch im Browser auf dem iPhone.
 - **Pausen:** GitHub startet geplante Läufe manchmal mit Verzögerung. Bei längerer
   Inaktivität im Repository kann GitHub den Zeitplan pausieren und schickt dann eine Mail;
   im Tab „Actions“ lässt er sich mit einem Klick wieder aktivieren.
+- **Suche:** Der Tab „Suche“ durchsucht alle Meldungen der letzten 7 Tage und zeigt sie nach
+  Medium geordnet. Inhaltlich ähnliche Meldungen anderer Medien (auch auf Englisch) kommen
+  automatisch dazu und sind als „ähnlich“ markiert (Schwelle: `NL_RELATED_MIN`, Standard 0.62).
 - **Status:** Der Tab „Quellen“ in der App zeigt, welche Feeds funktionieren, ob der
   Abgleich nach Bedeutung aktiv ist und wann der letzte Lauf war.
 

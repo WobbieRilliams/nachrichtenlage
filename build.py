@@ -14,7 +14,9 @@ from fetch import fetch, parse_feed
 
 DATA = "data"
 OUT = "_site"
-KEEP_HOURS = 72          # so lange werden Meldungen zwischen den Läufen aufbewahrt
+KEEP_HOURS = 168         # so lange werden Meldungen aufbewahrt (= Zeitraum der Suche, 7 Tage)
+COMPARE_KEEP_HOURS = 72  # so lange bleiben Claude-Vergleiche im Cache
+RELATED_MIN = float(os.environ.get("NL_RELATED_MIN", 0.62))  # ab wann eine Meldung als „ähnlich“ gilt
 MAX_COMPARE = int(os.environ.get("NL_MAX_COMPARE", 8))   # Claude-Vergleiche pro Lauf (Kosten!)
 MIN_SOURCES_COMPARE = 3  # erst ab so vielen Quellen lohnt ein Vergleich
 TEST_FEEDS = os.environ.get("NL_TEST_FEEDS")  # Ordner mit <Quelle>.xml statt Internet (zum Testen)
@@ -71,7 +73,7 @@ print(f"{len(recent)} Meldungen im Zeitfenster, {sum(s['ok'] for s in status.val
 
 # 2) Themen bilden (nach Bedeutung, sonst Wortabgleich)
 try:
-    vecs = embed.vectors(recent)
+    vecs = embed.vectors(list(articles.values()))  # alle 7 Tage – für Themen und Suche
 except Exception as exc:
     print("Bedeutungs-Abgleich fehlgeschlagen, nutze Wortabgleich:", exc)
     vecs = None
@@ -80,7 +82,7 @@ print(f"{len(topics)} Themen mit mindestens zwei Quellen")
 
 # 3) Claude-Vergleiche für die größten Themen – nur neu, wenn neue Quellen dazukommen
 cache = load("compare.json", [])
-cache = [c for c in cache if hours_ago(c["at"]) <= KEEP_HOURS]
+cache = [c for c in cache if hours_ago(c["at"]) <= COMPARE_KEEP_HOURS]
 done = 0
 for t in topics:
     if t["source_count"] < MIN_SOURCES_COMPARE:
@@ -120,6 +122,39 @@ shutil.rmtree(OUT, ignore_errors=True)
 shutil.copytree("site", OUT)
 save(OUT, "topics.json", {"topics": topics, "sources": sources, "stand": now.isoformat()})
 save(OUT, "latest.json", {"articles": [{k: (a.get(k) or "")[:1500] if k == "summary" else a.get(k) for k in ("source", "title", "link", "published", "image", "summary")} for a in latest]})
+
+# 5) Suchindex: alle Meldungen der letzten 7 Tage, kompakt, plus „ähnliche Meldungen anderer Medien“
+#    (nach Bedeutung, also auch über Sprachgrenzen hinweg) – die Suche läuft dann im Browser.
+src_names = [f[0] for f in FEEDS]
+src_idx = {n: i for i, n in enumerate(src_names)}
+arch = sorted((a for a in articles.values() if a["source"] in src_idx), key=lambda a: a["published"], reverse=True)
+pos = {a["id"]: i for i, a in enumerate(arch)}
+related = [[] for _ in arch]
+if vecs:
+    import numpy as np
+    ids = [a["id"] for a in arch if a["id"] in vecs]
+    if ids:
+        X = np.stack([vecs[i] for i in ids]).astype(np.float32)
+        srcs = np.array([src_idx[articles[i]["source"]] for i in ids])
+        for start in range(0, len(ids), 512):
+            sims = X[start:start + 512] @ X.T
+            for r, row in enumerate(sims):
+                me = start + r
+                row[srcs == srcs[me]] = -1  # nur andere Medien
+                top = np.argpartition(-row, min(6, len(row) - 1))[:6]
+                top = [j for j in top[np.argsort(-row[top])] if row[j] >= RELATED_MIN][:4]
+                related[pos[ids[me]]] = [pos[ids[j]] for j in top]
+search = {
+    "q": src_names,
+    "stand": now.isoformat(),
+    "a": [{
+        "s": src_idx[a["source"]], "t": a["title"], "x": (a.get("summary") or "")[:400],
+        "l": a["link"], "p": a["published"][:19] + "Z", "m": a.get("image") or "", "r": related[i], "i": a["id"],
+    } for i, a in enumerate(arch)],
+}
+save(OUT, "search.json", search)
+print(f"Suchindex: {len(arch)} Meldungen, {sum(1 for r in related if r)} mit ähnlichen Meldungen")
+
 save(OUT, "status.json", {
     "feeds": status,
     "abgleich": embed.status(),

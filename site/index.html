@@ -38,7 +38,7 @@ header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px so
 .mast h1{margin:0;font:700 30px/1.1 var(--serif);letter-spacing:-.01em}
 .mast .date{margin-top:4px;font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--ink-2)}
 nav{display:flex;justify-content:center;gap:4px;border-top:1px solid var(--rule)}
-nav button{padding:11px 12px;min-height:44px;font-size:13px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent}
+nav button{padding:11px 10px;min-height:44px;font-size:13px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent}
 nav button[aria-current="page"]{color:var(--ink);border-bottom-color:var(--ink)}
 
 main{padding-bottom:56px}
@@ -100,6 +100,25 @@ main{padding-bottom:56px}
 .expand .short{font-size:13px;color:var(--muted);margin:0 0 12px}
 .readon{display:flex;align-items:center;justify-content:center;gap:6px;min-height:46px;border:1px solid var(--ink);font-size:14px;font-weight:700}
 .readon:active{background:var(--chip)}
+.searchbar{display:flex;gap:8px;padding:16px 0 4px}
+.searchbar input{flex:1;min-width:0;height:46px;padding:0 14px;border:1px solid var(--ink);border-radius:0;background:var(--bg);color:var(--ink);font:400 17px var(--serif);-webkit-appearance:none;appearance:none}
+.searchbar input::placeholder{color:var(--muted)}
+.searchbar button{height:46px;padding:0 16px;background:var(--ink);color:var(--bg);font-size:14px;font-weight:700}
+.hint{font-size:12px;color:var(--muted);margin:6px 0 0}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}
+.chips button{min-height:36px;padding:0 12px;border:1px solid var(--rule);font-size:13px;font-weight:600}
+.summarybox{padding:16px 0 4px}
+.summarybox .big{font:700 24px/1.2 var(--serif);margin:0 0 4px}
+.outlet{display:flex;align-items:baseline;justify-content:space-between;margin:26px 0 0;padding:0 0 6px;border-bottom:1px solid var(--rule-dark)}
+.outlet h3{margin:0;font:700 15px/1.2 var(--sans)}
+.outlet span{font-size:12px;color:var(--muted)}
+.tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);border:1px solid var(--rule);padding:1px 5px;margin-left:6px;vertical-align:1px}
+.morebtn{min-height:44px;font-size:13px;font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.topiclink{display:block;margin:14px 0 0;padding:12px 14px;background:var(--chip);width:100%}
+.topiclink b{display:block;font:700 16px/1.3 var(--serif);margin-top:2px}
+.seg{display:flex;border:1px solid var(--ink);margin:14px 0 0}
+.seg button{flex:1;min-height:38px;font-size:13px;font-weight:600;text-align:center}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .time{flex:0 0 44px;font-size:12px;font-weight:600;color:var(--muted);padding-top:3px}
 
 .row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--rule);font-size:14px}
@@ -132,6 +151,7 @@ main{padding-bottom:56px}
   </div>
   <nav aria-label="Bereiche">
     <button type="button" data-view="topics" aria-current="page">Themen</button>
+    <button type="button" data-view="search">Suche</button>
     <button type="button" data-view="latest">Neueste</button>
     <button type="button" data-view="status">Quellen</button>
   </nav>
@@ -205,6 +225,7 @@ async function render() {
   try {
     if (view === 'topics') await renderTopics();
     else if (view === 'latest') await renderLatest();
+    else if (view === 'search') await renderSearch();
     else await renderStatus();
   } catch (e) {
     main.innerHTML = '<p class="empty">Noch keine Ausgabe da. Der erste Lauf bei GitHub dauert ein paar Minuten.</p>';
@@ -259,7 +280,8 @@ function report(a, opts = {}) {
     <summary class="story">
       ${opts.time ? `<span class="time">${clock(a.published)}</span>` : ''}
       <div class="body">
-        <div class="label" style="margin-bottom:4px">${esc(a.source)}</div>
+        ${opts.nosrc ? (opts.tag ? `<div style="margin-bottom:4px"><span class="tag" style="margin-left:0">${esc(opts.tag)}</span></div>` : '')
+          : `<div class="label" style="margin-bottom:4px">${esc(a.source)}${opts.tag ? `<span class="tag">${esc(opts.tag)}</span>` : ''}</div>`}
         <h3${opts.time ? ' style="font-size:17px"' : ''}>${esc(a.title)}</h3>
         ${text && !opts.time ? `<p class="clamp">${esc(text)}</p>` : ''}
         <div class="byline">${ago(a.published)}</div>
@@ -360,8 +382,130 @@ async function renderStatus() {
   }));
 }
 
+// ---------- Suche ----------
+let SEARCH = null, lastQuery = '', searchMode = 'medium';
+let history_ = [];
+try { history_ = JSON.parse(localStorage.getItem('nl_hist') || '[]'); } catch (e) {}
+const norm = s => (s || '').toLowerCase()
+  .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+  .normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ');
+
+async function loadSearch() {
+  if (SEARCH) return SEARCH;
+  const d = await getJSON('search.json');
+  if (!Object.keys(SOURCES).length) { try { SOURCES = (await getJSON('topics.json')).sources; } catch (e) {} }
+  d.a.forEach(a => { a.source = d.q[a.s]; a.hay = ' ' + norm(a.t + ' ' + a.x); a.ht = ' ' + norm(a.t); });
+  SEARCH = d;
+  return d;
+}
+
+function runSearch(q) {
+  const words = norm(q).split(' ').filter(w => w.length > 1);
+  if (!words.length) return null;
+  const A = SEARCH.a;
+  const hits = new Map(); // index -> {score, related}
+  A.forEach((a, i) => {
+    if (!on(a.source)) return;
+    let score = 0;
+    for (const w of words) {
+      if (!a.hay.includes(' ' + w)) return;          // jedes Wort muss vorkommen (Wortanfang)
+      score += a.ht.includes(' ' + w) ? 3 : 1;
+    }
+    hits.set(i, {score, related: false});
+  });
+  // Ähnliche Meldungen anderer Medien dazunehmen (auch andere Sprache)
+  [...hits.keys()].forEach(i => A[i].r.forEach(j => {
+    if (!hits.has(j) && on(A[j].source)) hits.set(j, {score: 0.5, related: true});
+  }));
+  return [...hits.entries()].map(([i, h]) => ({...A[i], ...h}))
+    .sort((a, b) => (b.p > a.p ? 1 : -1));
+}
+
+function toReport(a) {
+  return {source: a.source, title: a.t, summary: a.x, link: a.l, published: a.p, image: a.m};
+}
+
+async function renderSearch(q = lastQuery) {
+  main.innerHTML = `
+    <form class="searchbar" role="search" onsubmit="event.preventDefault(); doSearch(this.q.value)">
+      <label for="q" class="sr" style="position:absolute;left:-9999px">Thema suchen</label>
+      <input id="q" name="q" type="search" placeholder="Thema, Person, Ort …" value="${esc(q)}" autocomplete="off" enterkeyhint="search">
+      <button type="submit">Suchen</button>
+    </form>
+    <p class="hint">Durchsucht alle Meldungen deiner Quellen der letzten 7 Tage.</p>
+    <div id="results"></div>`;
+  if (q) return doSearch(q);
+  const box = document.getElementById('results');
+  box.innerHTML = `
+    ${history_.length ? `<div class="sec"><h2>Zuletzt gesucht</h2><span></span></div>
+      <div class="chips">${history_.map(h => `<button type="button" data-q="${esc(h)}">${esc(h)}</button>`).join('')}</div>` : ''}`;
+  box.querySelectorAll('[data-q]').forEach(b => b.addEventListener('click', () => doSearch(b.dataset.q)));
+}
+
+async function doSearch(q) {
+  q = (q || '').trim();
+  const box = document.getElementById('results');
+  const input = document.getElementById('q');
+  if (input) { input.value = q; input.blur(); }
+  if (!q) { box.innerHTML = '<p class="hint" style="color:#C0392B">Gib einen Suchbegriff ein.</p>'; return; }
+  lastQuery = q;
+  history_ = [q, ...history_.filter(h => h.toLowerCase() !== q.toLowerCase())].slice(0, 8);
+  try { localStorage.setItem('nl_hist', JSON.stringify(history_)); } catch (e) {}
+  box.innerHTML = '<p class="empty">Suche läuft …</p>';
+  try { await loadSearch(); } catch (e) { box.innerHTML = '<p class="empty">Der Suchindex ist noch nicht da. Er entsteht beim nächsten Lauf.</p>'; return; }
+  const res = runSearch(q);
+  if (!res || !res.length) { box.innerHTML = `<p class="empty">Keine Meldungen zu „${esc(q)}“ in den letzten 7 Tagen.</p>`; return; }
+
+  const bySrc = {};
+  res.forEach(a => (bySrc[a.source] ||= []).push(a));
+  const order = Object.keys(bySrc).sort((a, b) => bySrc[b].length - bySrc[a].length);
+  const silent = active().filter(s => !bySrc[s]);
+  const direct = res.filter(a => !a.related).length;
+  const days = Math.max(1, Math.round((Date.now() - new Date(res[res.length - 1].p)) / 864e5));
+
+  // Gehört ein Treffer zu einem aktuellen Thema?
+  let topicHtml = '';
+  try {
+    if (!TOPICS.length) { const d = await getJSON('topics.json'); SOURCES = d.sources; RAW = d.topics; TOPICS = applyFilter(RAW); }
+    const ids = new Set(res.map(a => a.i));
+    const ti = TOPICS.findIndex(t => t.articles.some(a => ids.has(a.id)));
+    if (ti >= 0) topicHtml = `<button type="button" class="topiclink" onclick="openTopic(${ti})">
+      <span class="label">Aktuelles Thema mit Perspektivvergleich ›</span><b>${esc(TOPICS[ti].title)}</b></button>`;
+  } catch (e) {}
+
+  const item = (a, nosrc) => report(toReport(a), {tag: a.related ? 'ähnlich' : '', nosrc});
+  const byMedium = order.map(s => {
+    const list = bySrc[s];
+    return `<div class="outlet"><h3>${esc(s)}</h3><span>${list.length} ${list.length === 1 ? 'Meldung' : 'Meldungen'}</span></div>
+      ${list.slice(0, 3).map(a => item(a, true)).join('')}
+      ${list.length > 3 ? `<div class="hidden" hidden>${list.slice(3).map(a => item(a, true)).join('')}</div>
+        <button type="button" class="morebtn" onclick="this.previousElementSibling.hidden=false;this.remove()">${list.length - 3} weitere von ${esc(s)}</button>` : ''}`;
+  }).join('');
+  const chrono = res.map(a => item(a, false)).join('');
+
+  box.innerHTML = `
+    <div class="summarybox">
+      <p class="big">${res.length} Meldungen in ${order.length} von ${active().length} Quellen</p>
+      <div class="meta">${direct} direkte Treffer${res.length > direct ? `, ${res.length - direct} inhaltlich ähnliche (auch andere Sprachen)` : ''} · ${days === 1 ? 'seit gestern' : `über ${days} Tage`}</div>
+      <div class="cover"><div class="bar"><i style="width:${Math.round(order.length / active().length * 100)}%"></i></div><span>${order.length} von ${active().length} Quellen</span></div>
+    </div>
+    ${topicHtml}
+    <div class="seg" role="group" aria-label="Sortierung">
+      <button type="button" data-mode="medium" aria-pressed="${searchMode === 'medium'}">Nach Medium</button>
+      <button type="button" data-mode="zeit" aria-pressed="${searchMode === 'zeit'}">Chronologisch</button>
+    </div>
+    <div id="list">${searchMode === 'medium' ? byMedium : `<div style="margin-top:8px">${chrono}</div>`}</div>
+    ${silent.length ? `<div class="sec"><h2>Nichts gefunden bei</h2><span>${silent.length} Quellen</span></div>
+      <p class="missing">${silent.map(esc).join(' · ')}</p>` : ''}`;
+  box.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
+    searchMode = b.dataset.mode;
+    box.querySelectorAll('[data-mode]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    document.getElementById('list').innerHTML = searchMode === 'medium' ? byMedium : `<div style="margin-top:8px">${chrono}</div>`;
+  }));
+}
+
 render();
-document.addEventListener('visibilitychange', () => { if (!document.hidden && !inDetail) render(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !inDetail && view !== 'search') render(); });
 </script>
 </body>
 </html>
