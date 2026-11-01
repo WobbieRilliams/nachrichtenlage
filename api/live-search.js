@@ -230,7 +230,8 @@ async function claude(env, prompt, maxTokens) {
       "anthropic-version": "2023-06-01",
       "content-type": "application/json",
     },
-    body: JSON.stringify({ model: env.NL_MODEL || MODEL, max_tokens: maxTokens, messages: [{ role: "user", content: prompt }] }),
+    // Kurze Aufgaben: ohne vorheriges Nachdenken – schneller, günstiger, und das Antwortlimit reicht sicher
+    body: JSON.stringify({ model: env.NL_MODEL || MODEL, max_tokens: maxTokens, thinking: { type: "disabled" }, messages: [{ role: "user", content: prompt }] }),
   });
   if (!res.ok) throw new Error(`claude ${res.status}: ${(await res.text()).slice(0, 120)}`);
   const data = await res.json();
@@ -242,7 +243,7 @@ async function claude(env, prompt, maxTokens) {
 async function translate(q, env) {
   const text = await claude(env,
     `Übersetze diesen Nachrichten-Suchbegriff ins Englische, so wie englischsprachige Medien ihn nennen würden. ` +
-    `Eigennamen bleiben. Antworte nur mit dem Suchbegriff, ohne Anführungszeichen.\n\n${q}`, 40);
+    `Eigennamen bleiben. Antworte nur mit dem Suchbegriff, ohne Anführungszeichen.\n\n${q}`, 100);
   return text.split("\n")[0].replace(/["„“]/g, "").trim().slice(0, 100) || q;
 }
 

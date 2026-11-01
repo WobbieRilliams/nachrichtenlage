@@ -36,7 +36,8 @@ def compare(articles):
     )
     msg = anthropic.Anthropic().messages.create(
         model=MODEL,
-        max_tokens=1500,
+        max_tokens=2000,
+        thinking={"type": "disabled"},  # Haiku denkt sonst standardmäßig vor und verbraucht das Antwortlimit
         messages=[{"role": "user", "content": PROMPT.format(items=items)}],
     )
     text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()
