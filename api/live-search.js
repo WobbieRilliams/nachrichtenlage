@@ -234,7 +234,9 @@ async function claude(env, prompt, maxTokens) {
   });
   if (!res.ok) throw new Error(`claude ${res.status}: ${(await res.text()).slice(0, 120)}`);
   const data = await res.json();
-  return data.content.filter(b => b.type === "text").map(b => b.text).join("").trim();
+  const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("").trim();
+  if (!text) throw new Error(`leere Antwort (stop: ${data.stop_reason}, blöcke: ${(data.content || []).map(b => b.type).join("/")}, modell: ${data.model})`);
+  return text;
 }
 
 async function translate(q, env) {
