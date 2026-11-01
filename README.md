@@ -60,7 +60,7 @@ weil Browser solche Anfragen von einer Webseite aus blockieren. Das übernimmt d
 
 1. Auf [vercel.com/new](https://vercel.com/new) mit GitHub anmelden und dieses Repository
    (`nachrichtenlage`) **importieren**. Framework: „Other“, sonst nichts ändern.
-2. Vor dem Deploy unter **„Environment Variables“** eintragen: Name `ANTHROPIC_API_KEY`,
+2. Vor dem Deploy unter **„Environment Variables“** eintragen: Name `HENDRIK_API_KEY`,
    Wert dein Claude-Key. (Ohne Key gibt es Treffer, aber keine Zusammenfassung und keine
    Übersetzung für die englischen Medien.)
 3. **„Deploy“**. Danach ist die Suche erreichbar unter

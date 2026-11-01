@@ -7,7 +7,7 @@
  *
  * Quelle der Treffer: Google-News-Suche je Medium (site:…), bei Problemen GDELT.
  * Einstellungen in Vercel → Project → Settings → Environment Variables:
- *   ANTHROPIC_API_KEY  (optional) – für Übersetzung und Zusammenfassung
+ *   HENDRIK_API_KEY    (optional) – Claude-Key für Übersetzung und Zusammenfassung
  *   ALLOWED_ORIGIN     (optional) – Standard: https://wobbierilliams.github.io
  */
 
@@ -42,7 +42,8 @@ const CACHE_SECONDS = 600; // gleiche Suche 10 Minuten lang aus dem Zwischenspei
 const MODEL = "claude-haiku-5-5";
 
 export default async function handler(request) {
-  const env = process.env;
+  // Claude-Key: HENDRIK_API_KEY (wie bei GitHub) oder ANTHROPIC_API_KEY
+  const env = { ...process.env, ANTHROPIC_API_KEY: process.env.HENDRIK_API_KEY || process.env.ANTHROPIC_API_KEY };
   const allowed = env.ALLOWED_ORIGIN || "https://wobbierilliams.github.io";
   const cors = {
     "Access-Control-Allow-Origin": allowed,
