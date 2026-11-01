@@ -74,7 +74,9 @@ export default async function handler(request) {
 
 async function search(q, outlets, env, withSummary) {
   const needsEnglish = outlets.some(o => o[2] === "en");
-  const qEn = needsEnglish && env.ANTHROPIC_API_KEY ? await translate(q, env).catch(() => q) : q;
+  const ai = { key: !!env.ANTHROPIC_API_KEY, fehler: null };
+  const note = err => { ai.fehler = ai.fehler || String(err).slice(0, 160); };
+  const qEn = needsEnglish && env.ANTHROPIC_API_KEY ? await translate(q, env).catch(err => { note(err); return q; }) : q;
 
   let items = [];
   let engine = "google";
@@ -98,8 +100,26 @@ async function search(q, outlets, env, withSummary) {
     found_in: [...new Set(items.map(i => i.source))],
     items: picked,
   };
-  if (withSummary && picked.length >= 2) out.summary = await summarize(q, picked, env).catch(() => null);
+  if (withSummary && picked.length >= 2) out.summary = await summarize(q, picked, env).catch(err => { note(err); return null; });
+  out.ai = ai;
   return out;
+}
+
+// ---------- Relevanz: Suchbegriff muss in der Überschrift vorkommen ----------
+function norm(t) {
+  return (t || "").toLowerCase()
+    .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+}
+function matcher(q) {
+  const words = norm(q).split(" ").filter(w => w.length >= 3);
+  if (!words.length) return () => true;
+  return title => {
+    const tw = norm(title).split(" ");
+    // jedes Suchwort muss ein Wort der Überschrift beginnen – oder (ab 5 Buchstaben) darin stecken,
+    // damit „Rente“ auch „Rentenpaket“ und „Grundrente“ findet
+    return words.every(w => tw.some(t => t.startsWith(w) || (w.length >= 5 && t.includes(w))));
+  };
 }
 
 // ---------- Google News (je Medium) ----------
@@ -110,8 +130,10 @@ async function googleNews(q, [name, domain, lang]) {
     headers: { "User-Agent": "Mozilla/5.0 (Nachrichtenlage Live-Suche)" },
   });
   if (!res.ok) throw new Error(`google ${res.status}`);
+  const relevant = matcher(q);
   return parseRss(await res.text())
     .map(i => ({ ...i, source: name, lang, title: stripSource(i.title) }))
+    .filter(i => relevant(i.title))
     .slice(0, 5);
 }
 
@@ -143,6 +165,7 @@ function decode(s) {
 
 // ---------- GDELT (Rückfall) ----------
 async function gdelt(q, qEn, outlets) {
+  const relDe = matcher(q), relEn = matcher(qEn || q);
   const domains = outlets.map(o => `domainis:${o[1]}`).join(" OR ");
   const terms = qEn && qEn !== q ? `(${quote(q)} OR ${quote(qEn)})` : quote(q);
   const params = new URLSearchParams({
@@ -157,7 +180,7 @@ async function gdelt(q, qEn, outlets) {
     const s = a.seendate || "";
     const iso = s.length >= 15 ? `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}T${s.slice(9, 11)}:${s.slice(11, 13)}:${s.slice(13, 15)}Z` : null;
     return o && { title: a.title, link: a.url, published: iso, source: o[0], lang: o[2], image: a.socialimage || "" };
-  }).filter(Boolean);
+  }).filter(Boolean).filter(i => (i.lang === "en" ? relEn : relDe)(i.title));
 }
 
 function quote(s) {
@@ -199,7 +222,7 @@ async function claude(env, prompt, maxTokens) {
     },
     body: JSON.stringify({ model: env.NL_MODEL || MODEL, max_tokens: maxTokens, messages: [{ role: "user", content: prompt }] }),
   });
-  if (!res.ok) throw new Error(`claude ${res.status}`);
+  if (!res.ok) throw new Error(`claude ${res.status}: ${(await res.text()).slice(0, 120)}`);
   const data = await res.json();
   return data.content.filter(b => b.type === "text").map(b => b.text).join("").trim();
 }
