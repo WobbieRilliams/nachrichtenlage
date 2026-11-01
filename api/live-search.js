@@ -43,7 +43,9 @@ const MODEL = "claude-haiku-5-5";
 
 export default async function handler(request) {
   // Claude-Key: HENDRIK_API_KEY (wie bei GitHub) oder ANTHROPIC_API_KEY
-  const env = { ...process.env, ANTHROPIC_API_KEY: process.env.HENDRIK_API_KEY || process.env.ANTHROPIC_API_KEY };
+  // Notfalls jede Variable nehmen, deren Wert wie ein Claude-Key aussieht – der Name ist dann egal
+  const anyKey = Object.values(process.env).find(v => typeof v === "string" && v.trim().startsWith("sk-ant-"));
+  const env = { ...process.env, ANTHROPIC_API_KEY: (process.env.HENDRIK_API_KEY || process.env.ANTHROPIC_API_KEY || anyKey || "").trim() };
   const allowed = env.ALLOWED_ORIGIN || "https://wobbierilliams.github.io";
   const cors = {
     "Access-Control-Allow-Origin": allowed,
