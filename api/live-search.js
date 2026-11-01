@@ -74,7 +74,12 @@ export default async function handler(request) {
 
 async function search(q, outlets, env, withSummary) {
   const needsEnglish = outlets.some(o => o[2] === "en");
-  const ai = { key: !!env.ANTHROPIC_API_KEY, fehler: null };
+  const k = env.ANTHROPIC_API_KEY || "";
+  // Nur die Form des Keys melden, nie den Key selbst
+  const ai = {
+    key: !!k, fehler: null,
+    form: k ? { beginnt_mit_sk_ant: k.startsWith("sk-ant-"), laenge: k.length, leerzeichen: /\s/.test(k), anfuehrungszeichen: /["'“”„]/.test(k) } : null,
+  };
   const note = err => { ai.fehler = ai.fehler || String(err).slice(0, 160); };
   const qEn = needsEnglish && env.ANTHROPIC_API_KEY ? await translate(q, env).catch(err => { note(err); return q; }) : q;
 
