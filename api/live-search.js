@@ -1,14 +1,17 @@
 /**
- * Nachrichtenlage – Live-Suche (Cloudflare Worker)
+ * Nachrichtenlage – Live-Suche (Vercel-Funktion)
  *
+ * Erreichbar unter https://<projekt>.vercel.app/api/live-search?q=…
  * Fragt bei jeder Suche alle Medien parallel ab, nimmt die neuesten Artikel quer über
  * die Medien (höchstens 2 pro Medium) und lässt Claude optional kurz zusammenfassen.
  *
  * Quelle der Treffer: Google-News-Suche je Medium (site:…), bei Problemen GDELT.
- * Einstellungen (Cloudflare → Worker → Settings → Variables and Secrets):
- *   ANTHROPIC_API_KEY  (Secret, optional)  – für Übersetzung und Zusammenfassung
- *   ALLOWED_ORIGIN     (Text, optional)    – Standard: https://wobbierilliams.github.io
+ * Einstellungen in Vercel → Project → Settings → Environment Variables:
+ *   ANTHROPIC_API_KEY  (optional) – für Übersetzung und Zusammenfassung
+ *   ALLOWED_ORIGIN     (optional) – Standard: https://wobbierilliams.github.io
  */
+
+export const config = { runtime: "edge" };
 
 const OUTLETS = [
   ["Tagesschau", "tagesschau.de", "de"],
@@ -38,44 +41,35 @@ const PER_OUTLET = 2;     // höchstens so viele pro Medium
 const CACHE_SECONDS = 600; // gleiche Suche 10 Minuten lang aus dem Zwischenspeicher
 const MODEL = "claude-haiku-5-5";
 
-export default {
-  async fetch(request, env, ctx) {
-    const allowed = env.ALLOWED_ORIGIN || "https://wobbierilliams.github.io";
-    const cors = {
-      "Access-Control-Allow-Origin": allowed,
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Vary": "Origin",
-    };
-    if (request.method === "OPTIONS") return new Response(null, { headers: cors });
+export default async function handler(request) {
+  const env = process.env;
+  const allowed = env.ALLOWED_ORIGIN || "https://wobbierilliams.github.io";
+  const cors = {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Vary": "Origin",
+  };
+  if (request.method === "OPTIONS") return new Response(null, { headers: cors });
 
-    // Nur die eigene Seite darf die Suche nutzen (schützt dein Claude-Guthaben)
-    const origin = request.headers.get("Origin");
-    if (origin !== allowed) return json({ error: "Nicht erlaubt" }, 403, cors);
+  // Nur die eigene Seite darf die Suche nutzen (schützt dein Claude-Guthaben)
+  const origin = request.headers.get("Origin");
+  if (origin !== allowed) return json({ error: "Nicht erlaubt" }, 403, cors);
 
-    const url = new URL(request.url);
-    const q = (url.searchParams.get("q") || "").trim().slice(0, 100);
-    if (!q) return json({ error: "Suchbegriff fehlt" }, 400, cors);
-    const wanted = (url.searchParams.get("sources") || "").split(",").filter(Boolean);
-    const outlets = wanted.length ? OUTLETS.filter(o => wanted.includes(o[0])) : OUTLETS;
-    const withSummary = url.searchParams.get("sum") === "1" && !!env.ANTHROPIC_API_KEY;
+  const url = new URL(request.url);
+  const q = (url.searchParams.get("q") || "").trim().slice(0, 100);
+  if (!q) return json({ error: "Suchbegriff fehlt" }, 400, cors);
+  const wanted = (url.searchParams.get("sources") || "").split(",").filter(Boolean);
+  const outlets = wanted.length ? OUTLETS.filter(o => wanted.includes(o[0])) : OUTLETS;
+  const withSummary = url.searchParams.get("sum") === "1" && !!env.ANTHROPIC_API_KEY;
 
-    const cacheKey = new Request(
-      "https://cache.nachrichtenlage/?" +
-        new URLSearchParams({ q: q.toLowerCase(), s: outlets.map(o => o[0]).join(","), sum: withSummary ? "1" : "0" })
-    );
-    const cached = await caches.default.match(cacheKey);
-    if (cached) return withHeaders(cached, cors);
-
-    try {
-      const result = await search(q, outlets, env, withSummary);
-      const response = json(result, 200, { ...cors, "Cache-Control": `public, max-age=${CACHE_SECONDS}` });
-      ctx.waitUntil(caches.default.put(cacheKey, response.clone()));
-      return response;
-    } catch (err) {
-      return json({ error: "Suche fehlgeschlagen", detail: String(err).slice(0, 200) }, 502, cors);
-    }
-  },
-};
+  try {
+    const result = await search(q, outlets, env, withSummary);
+    // Vercel speichert die Antwort 10 Minuten im CDN – gleiche Suche kostet dann nichts
+    return json(result, 200, { ...cors, "Cache-Control": `public, s-maxage=${CACHE_SECONDS}, stale-while-revalidate=60` });
+  } catch (err) {
+    return json({ error: "Suche fehlgeschlagen", detail: String(err).slice(0, 200) }, 502, cors);
+  }
+}
 
 async function search(q, outlets, env, withSummary) {
   const needsEnglish = outlets.some(o => o[2] === "en");
@@ -113,7 +107,6 @@ async function googleNews(q, [name, domain, lang]) {
   const params = new URLSearchParams({ q: `${q} site:${domain} when:7d`, ...loc });
   const res = await fetch(`https://news.google.com/rss/search?${params}`, {
     headers: { "User-Agent": "Mozilla/5.0 (Nachrichtenlage Live-Suche)" },
-    cf: { cacheTtl: 300 },
   });
   if (!res.ok) throw new Error(`google ${res.status}`);
   return parseRss(await res.text())
@@ -235,10 +228,3 @@ function json(obj, status, headers) {
     headers: { "Content-Type": "application/json; charset=utf-8", ...headers },
   });
 }
-
-function withHeaders(response, headers) {
-  const r = new Response(response.body, response);
-  for (const [k, v] of Object.entries(headers)) r.headers.set(k, v);
-  return r;
-}
-

@@ -197,7 +197,7 @@ function applyFilter(raw) {
   }).filter(t => t.source_count >= 2)
     .sort((a, b) => b.source_count - a.source_count || (b.latest > a.latest ? 1 : -1));
 }
-// Adresse der Live-Suche (Cloudflare Worker). Leer = Live-Suche ausgeblendet.
+// Adresse der Live-Suche (Vercel-Funktion api/live-search). Leer = Live-Suche ausgeblendet.
 const LIVE_URL = '';
 const bust = () => '?t=' + Math.floor(Date.now() / 60000);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
