@@ -154,7 +154,10 @@ function parseRss(xml) {
 
 function stripSource(title) {
   // Google hängt " - Medienname" an
-  return title.replace(/\s[-–]\s[^-–]{2,40}$/, "").trim();
+  let t = title.replace(/\s[-–]\s[^-–]{2,40}$/, "").trim();
+  // manche Medien hängen selbst noch Ressort und Marke an, z. B. „… - Politik - SZ.de“
+  t = t.replace(/\s[-–|]\s(?:[A-Za-zÄÖÜäöü ]{2,20}\s[-–|]\s)?(SZ\.de|ZEIT ONLINE|DER SPIEGEL|FAZ|tagesschau\.de|WELT|n-tv\.de)$/i, "").trim();
+  return t;
 }
 
 function decode(s) {
